@@ -1,4 +1,4 @@
-function nearlynewton!(f, ∇f!, x0, scheme; inverse=true, c=0.001, g_tol=1e-8, max_iter=10^4, show_trace=false)
+function nlsolve!(f, ∇f!, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_iter=10^4, show_trace=false)
     n = length(x0)
     x_curr = copy(x0)
     ∇f_next, ∇f_curr = similar(x0), similar(x0)
@@ -18,8 +18,9 @@ function nearlynewton!(f, ∇f!, x0, scheme; inverse=true, c=0.001, g_tol=1e-8, 
     for i = 1:max_iter
         copyto!(x_curr, x_next)
         ∇f!(∇f_curr, x_curr)
-        d .= ∇f_curr
-        solve!(B, d)
+
+        d = solve!(d, B, ∇f_curr)
+
         α, f_α, ls_success = backtracking(f, x_curr, d, ∇f_curr; α_0=1.0, c=c, verbose=show_trace)
         Δx .= α .* d
         x_next .= x_curr .+ Δx
@@ -36,7 +37,7 @@ function nearlynewton!(f, ∇f!, x0, scheme; inverse=true, c=0.001, g_tol=1e-8, 
 end
 
 
-function nearlynewton(f, ∇f, x0, scheme; inverse=true, c=0.001, g_tol=1e-8, max_iter=10^4, show_trace=false)
+function nlsolve(f, ∇f, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_iter=10^4, show_trace=false)
     n = length(x0)
     x_curr = copy(x0)
     ∇f_curr = ∇f(x_curr)
