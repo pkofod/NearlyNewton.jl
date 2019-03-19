@@ -21,11 +21,6 @@ function backtracking(f, x::AbstractArray{T}, d, ∇f_x; α_0=T(1.0),
         β, α = α, α*ratio # backtrack according to specified ratio
         f_α = f(x + α*d) # update function value
 		is_solved = isfinite(f_α) && f(x) - f(x + α*d) >= α*t
-        if verbose
-            println("α: ", α)
-            println("α*t: ", α*t)
-            println("Value at α: ", f(x + α*d))
-        end
     end
 
 	ls_success = iter >= ls_max_iter ? false : true

@@ -123,6 +123,9 @@ function update!(scheme::SR1, B::HessianApproximation, Δx, y)
    B.B = B.B + (y - B.B*Δx)*(y - B.B*Δx)'/dot(y - B.B*Δx, Δx)
 end
 
-
+struct NearlyNewtonUpdater{SchemeType, BType}
+   scheme::SchemeType
+   B::BType
+end
 
 end # module
