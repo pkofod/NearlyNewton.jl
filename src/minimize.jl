@@ -23,6 +23,7 @@ function minimize!(f, ∇f!, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_
     x_curr, ∇f_next, ∇f_curr, B, d, Δx, x_next, y = preallocate_minimize_caches(x0, inverse, scheme)
 
     # Update gradient
+    x_next .= x0
     ∇f!(∇f_next, x_next)
     x_next, ∇f_next = iterate!(scheme, f, ∇f!, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; c=c, show_ls_trace=show_ls_trace, ls_max_iter=ls_max_iter, g_tol=g_tol)
 
@@ -53,7 +54,7 @@ function iterate!(scheme, f, ∇f!, ∇f_curr, ∇f_next, x_curr, x_next, d, B, 
 
     copyto!(x_curr, x_next)
     copyto!(∇f_curr, ∇f_next)
-    
+
     # Update current gradient and calculate the search direction
     d = find_direction!(d, B, ∇f_curr) # solve Bd = -∇f
 

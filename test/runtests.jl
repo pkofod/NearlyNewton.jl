@@ -93,8 +93,10 @@ using LinearAlgebra: norm
     res = minimize!(f, g!, NearlyNewton.BFGS(), x0; inverse = true)
     @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = minimize!(f, g!, NearlyNewton.BFGS(), x0; inverse = false)
+    @time minimize!(f, g!, NearlyNewton.BFGS(), x0; inverse = false)
     @printf("NN! BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = optimize(f, g!, x0, Optim.BFGS(linesearch=BackTracking()))
+    @time optimize(f, g!, x0, Optim.BFGS(linesearch=BackTracking()))
     @printf("OT! BFGS (inverse): %2.2e  %2.2e\n", norm(Optim.minimizer(res)-xopt,Inf), Optim.g_residual(res))
 
     res = minimize(f, g, NearlyNewton.DFP(), x0; inverse = true)
