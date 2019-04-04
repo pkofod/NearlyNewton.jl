@@ -7,6 +7,9 @@ find_direction(::DirectApprox, ::UniformScaling, ∇f) = -∇f
 # we may want to accept a factorized B here instead of B itself.
 # This way we can simply update the factorization outside.
 # do factorization another place for the possibility to do smart things
+function find_direction!(d::AbstractArray, B::UniformScaling, ∇f)
+   @. d = -∇f
+end
 function find_direction!(d::AbstractArray, B::AbstractArray, ∇f)
    @. d = -∇f
    ldiv!(factorize(B), d)
