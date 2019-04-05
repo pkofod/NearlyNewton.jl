@@ -12,3 +12,15 @@ end
 function update(scheme::BFGS, ::InverseApprox, A, Δx, y)
    second_update(A, Δx, y)
 end
+function update!(scheme::BFGS, ::DirectApprox, A, Δx, y)
+   first_update!(A, Δx, y)
+end
+function update!(scheme::BFGS, ::InverseApprox, A, Δx, y)
+   second_update!(A, Δx, y)
+end
+function update!(scheme::BFGS, ::DirectApprox, A::UniformScaling, Δx, y)
+   first_update(A, Δx, y)
+end
+function update!(scheme::BFGS, ::InverseApprox, A::UniformScaling, Δx, y)
+   second_update(A, Δx, y)
+end

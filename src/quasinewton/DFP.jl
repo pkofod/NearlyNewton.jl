@@ -13,3 +13,15 @@ end
 function update(scheme::DFP, ::DirectApprox, A, Δx, y)
    second_update(A, y, Δx)
 end
+function update!(scheme::DFP, ::InverseApprox, A, Δx, y)
+   first_update!(A, y, Δx)
+end
+function update!(scheme::DFP, ::DirectApprox, A, Δx, y)
+   second_update!(A, y, Δx)
+end
+function update!(scheme::DFP, ::InverseApprox, A::UniformScaling, Δx, y)
+   first_update(A, Δx, y)
+end
+function update!(scheme::DFP, ::DirectApprox, A::UniformScaling, Δx, y)
+   second_update(A, Δx, y)
+end
