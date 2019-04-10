@@ -1,3 +1,13 @@
+struct OptOptions{T1, T2}
+    c::T1
+    g_tol::T1
+    max_iter::T2
+    show_trace::Bool
+end
+
+OptOptions(; c=1e-4, g_tol=1e-8, max_iter=10^4, show_trace=false) =
+    OptOptions(c, g_tol, max_iter, show_trace)
+
 function preallocate_minimize_caches(x0)
     n = length(x0)
 
@@ -16,16 +26,15 @@ function preallocate_minimize_caches(x0)
 
     return x_curr, ∇f_next, ∇f_curr, d, Δx, x_next, y
 end
-function minimize!(f, ∇f!, x0, scheme, approx, B0;
-                   inverse=true, c=0.0001, g_tol=1e-8, max_iter=10^5,
-                   ls_max_iter=50, show_trace=false,  show_ls_trace=false)
+function minimize!(f∇f!, x0, scheme, approx, B0, options::OptOptions)
+    c, g_tol, max_iter, show_trace = options.c, options.g_tol, options.max_iter, options.show_trace
 
     x_curr, ∇f_next, ∇f_curr, d, Δx, x_next, y = preallocate_minimize_caches(x0)
 
     # Update gradient
     x_next .= x0
-    ∇f!(∇f_next, x_next)
-    x_next, ∇f_next, B = iterate!(scheme, approx, f, ∇f!, ∇f_curr, ∇f_next, x_curr, x_next, d, B0, Δx, y; first=true, c=c, show_ls_trace=show_ls_trace, ls_max_iter=ls_max_iter, g_tol=g_tol)
+    f_curr, ∇f_next = f∇f!(true, ∇f_next, x_next)
+    x_next, ∇f_next, B = iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B0, Δx, y; first=true, c=c, g_tol=g_tol)
 
     # Check for gradient convergence
     converged = norm(∇f_next) < g_tol
@@ -38,7 +47,7 @@ function minimize!(f, ∇f!, x0, scheme, approx, B0;
     while iter <= max_iter
         iter += 1
 
-        x_next, ∇f_next, B = iterate!(scheme, approx, f, ∇f!, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; c=c, show_ls_trace=show_ls_trace, ls_max_iter=ls_max_iter, g_tol=g_tol)
+        x_next, ∇f_next, B = iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; c=c, g_tol=g_tol)
         # Check for gradient convergence
         converged = norm(∇f_next) < g_tol
 
@@ -49,22 +58,22 @@ function minimize!(f, ∇f!, x0, scheme, approx, B0;
     return x_next, ∇f_next, iter
 end
 
-function iterate!(scheme, approx, f, ∇f!, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; first=false, c=0.001, show_ls_trace=false, ls_max_iter=50, g_tol=1e-8)
+function iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; first=false, c=0.001, g_tol=1e-8)
 
     copyto!(x_curr, x_next)
     copyto!(∇f_curr, ∇f_next)
 
     # Update current gradient and calculate the search direction
-    d = find_direction!(d, approx, B, ∇f_curr) # solve Bd = -∇f
+    d = find_direction!(d, scheme, approx, B, ∇f_curr) # solve Bd = -∇f
     lsoptions = LSOptions(0.5, 1e-4, 100, true)
     # Perform line search along d
-    α, f_α, ls_success = backtracking(f, x_curr, d, ∇f_curr, 1.0, lsoptions)
+    α, f_α, ls_success = backtracking(f∇f!, x_curr, d, f_curr, ∇f_curr, 1.0, lsoptions)
 
     # Calculate final step vector and update the state
     @. Δx = α * d
     @. x_next = x_curr + Δx
     # Update gradient
-    ∇f!(∇f_next, x_next)
+    f_next, ∇f_next = f∇f!(true, ∇f_next, x_next)
 
     # Update y
     @. y = ∇f_next - ∇f_curr
@@ -78,27 +87,26 @@ function iterate!(scheme, approx, f, ∇f!, ∇f_curr, ∇f_next, x_curr, x_next
 
     return x_next, ∇f_next, B
 end
-function minimize(f::T1, ∇f::T2, x0, scheme, approx, B0;
-                  c=0.0001, g_tol=1e-8, max_iter=10^5, ls_max_iter=100,
-                  show_trace=false, show_ls_trace=false) where {T1, T2}
-# function minimize(f::F1, ∇f::F2, x0, scheme, approx, B0) where {F1, F2}
 
+function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions) where {T1}
+# function minimize(f::F1, ∇f::F2, x0, scheme, approx, B0) where {F1, F2}
+    c, g_tol, max_iter, show_trace = options.c, options.g_tol, options.max_iter, options.show_trace
     lsoptions = LSOptions(0.5, 1e-4, 100, true)
 
     # Maintain current state in x_curr
     x_curr = x0
     # Update current gradient
-    ∇f_curr = ∇f(x_curr)
+    f_curr, ∇f_curr = f∇f(true, true, x_curr)
     # Find direction using Hessian approximation
-    d = find_direction(approx, B0, ∇f_curr)
+    d = find_direction(scheme, approx, B0, ∇f_curr)
     # Perform a backtracking step
-    α, f_α, ls_success = backtracking(f, x_curr, d, ∇f_curr, 1.0, lsoptions)
+    α, f_α, ls_success = backtracking(f∇f, x_curr, d, f_curr, ∇f_curr, 1.0, lsoptions)
     # Maintain the change in x in Δx
     Δx = α * d
     # Maintain the new x in x_next
     x_next = x_curr + Δx
     # Update the gradient at the new point
-    ∇f_next = ∇f(x_next)
+    f_next, ∇f_next = f∇f(true, true, x_next)
     # Update y
     y = ∇f_next - ∇f_curr
     # Badj = α*I
@@ -110,12 +118,13 @@ function minimize(f::T1, ∇f::T2, x0, scheme, approx, B0;
     while iter <= max_iter
         iter += 1
         x_curr = copy(x_next)
-        ∇f_curr = ∇f(x_curr)
+        f_curr = f_next
+        ∇f_curr = ∇f_next
 
         # Solve the system Bd = -∇f to find the search direction d
-        d = find_direction(approx, B, ∇f_curr)
+        d = find_direction(scheme, approx, B, ∇f_curr)
         # Perform line search along d
-        α, f_α, ls_success = backtracking(f, x_curr, d, ∇f_curr, 1.0, lsoptions)
+        α, f_α, ls_success = backtracking(f∇f, x_curr, d, f_curr, ∇f_curr, 1.0, lsoptions)
 
         # Update change in x according to α from above
         Δx = α * d
@@ -123,11 +132,11 @@ function minimize(f::T1, ∇f::T2, x0, scheme, approx, B0;
         # Take step
         x_next = x_curr + Δx
         # Update gradient
-        ∇f_next = ∇f(x_next)
+        f_next, ∇f_next = f∇f(true, true, x_next)
         # # Update y
         y = ∇f_next - ∇f_curr
 
-        trace_show(show_trace, f, x_next, x_curr, α)
+        trace_show(show_trace, f_curr, f_next, x_next, x_curr, α)
 
         # Check for gradient convergence
         if norm(∇f_next) < g_tol
@@ -136,14 +145,15 @@ function minimize(f::T1, ∇f::T2, x0, scheme, approx, B0;
 
         # Quasi-Newton update
         B = update(scheme, approx, B, Δx, y)
+
     end
     return x_next, ∇f_next, iter
 end
 
-function trace_show(show_trace, f, x_next, x_curr, α)
+function trace_show(show_trace, f_curr, f_next, x_next, x_curr, α)
     if show_trace
-        println("Objective value (curr): ", f(x_curr))
-        println("Objective value (prev): ", f(x_prev))
+        println("Objective value (curr): ", f_next)
+        println("Objective value (prev): ", f_curr)
         println("Step size: ", α)
     end
 end

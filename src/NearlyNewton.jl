@@ -3,13 +3,13 @@ module NearlyNewton
 # We use often use the LinearAlgebra functions dot and norm for operations rela-
 # ted to assessing angles between vectors, size of vectors and so on. I is mainly
 # used to get gradient descent for free out of Newton's method.
-using LinearAlgebra: dot, I, norm, mul!, factorize, ldiv!, rmul!, UniformScaling
+using LinearAlgebra: dot, I, norm, mul!, cholesky, ldiv!, rmul!, UniformScaling, Symmetric, factorize
 
 # Include the actual functions that expose the functionality in this package.
 include("hessian_object.jl")
 
 include("minimize.jl")
-export minimize, minimize!
+export minimize, minimize!, OptOptions
 include("nlsolve.jl")
 export nlsolve, nlsolve!
 

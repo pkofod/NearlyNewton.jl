@@ -5,11 +5,14 @@ function first_update(X, p, q)
     X + q*q'/dot(p, q) - X*q*q'*X/(q'*X*q)
 end
 function second_update(X, p, q)
-    (I - p*q'/dot(q, p))*X*(I - q*p'/dot(q, p)) + p*p'/dot(q, p)
+    dqp = dot(q, p)
+    (I - p*q'/dqp)*X*(I - q*p'/dqp) + p*p'/dqp
 end
 function first_update!(A, p, q)
-    A .= A + q*q'/dot(p, q) - A*q*q'*A/(q'*A*q)
+    qqt = q*q'
+    A .+= qqt/dot(p, q) - A*qqt*A/(q'*A*q)
 end
 function second_update!(A, p, q)
-    A .= (I - p*q'/dot(q, p))*A*(I - q*p'/dot(q, p)) + p*p'/dot(q, p)
+    dqp = dot(q, p)
+    A .= (I - p*q'/dqp)*A*(I - q*p'/dqp) + p*p'/dqp
 end
