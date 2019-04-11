@@ -39,36 +39,69 @@ using LinearAlgebra: norm, I
                 return f, ∇f
             else
                 return f
+            end
         elseif !(∇f == nothing)
             return ∇f
         end
     end
+    function theta(x)
+       if x[1] > 0
+           return atan(x[2] / x[1]) / (2.0 * pi)
+       else
+           return (pi + atan(x[2] / x[1])) / (2.0 * pi)
+       end
+    end
+    f(x) = 100.0 * ((x[3] - 10.0 * theta(x))^2 + (sqrt(x[1]^2 + x[2]^2) - 1.0)^2) + x[3]^2
 
-    g(x) = g!(copy(x), x)
-
-    function gs(x)
-        function theta(x)
-            if x[1] > 0
-                return atan(x[2] / x[1]) / (2.0 * pi)
+    function f∇f!(∇f, x)
+        if !(∇f==nothing)
+            if ( x[1]^2 + x[2]^2 == 0 )
+                dtdx1 = 0;
+                dtdx2 = 0;
             else
-                return (pi + atan(x[2] / x[1])) / (2.0 * pi)
+                dtdx1 = - x[2] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) );
+                dtdx2 =   x[1] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) );
             end
+            ∇f[1] = -2000.0*(x[3]-10.0*theta(x))*dtdx1 +
+                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[1]/sqrt( x[1]^2+x[2]^2 );
+            ∇f[2] = -2000.0*(x[3]-10.0*theta(x))*dtdx2 +
+                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[2]/sqrt( x[1]^2+x[2]^2 );
+            ∇f[3] =  200.0*(x[3]-10.0*theta(x)) + 2.0*x[3];
         end
 
-        if ( x[1]^2 + x[2]^2 == 0 )
-            dtdx1 = 0;
-            dtdx2 = 0;
+        if ∇f == nothing
+            return f(x)
         else
-            dtdx1 = - x[2] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) );
-            dtdx2 =   x[1] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) );
+            return f(x), ∇f
         end
+    end
+    function f∇f(∇f, x)
+        if !(∇f == nothing)
+            return f∇f!(similar(x), x)
+        else
+            return f∇f!(∇f, x)
+        end
+    end
+    function f∇fs(∇f, x)
+        if !(∇f == nothing)
+            if ( x[1]^2 + x[2]^2 == 0 )
+                dtdx1 = 0;
+                dtdx2 = 0;
+            else
+                dtdx1 = - x[2] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) )
+                dtdx2 =   x[1] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) )
+            end
 
-        s1 = -2000.0*(x[3]-10.0*theta(x))*dtdx1 +
-            200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[1]/sqrt( x[1]^2+x[2]^2 );
-        s2 = -2000.0*(x[3]-10.0*theta(x))*dtdx2 +
-            200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[2]/sqrt( x[1]^2+x[2]^2 );
-        s3 = 200.0*(x[3]-10.0*theta(x)) + 2.0*x[3];
-        @SVector [s1, s2, s3]
+            s1 = -2000.0*(x[3]-10.0*theta(x))*dtdx1 +
+                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[1]/sqrt( x[1]^2+x[2]^2 )
+            s2 = -2000.0*(x[3]-10.0*theta(x))*dtdx2 +
+                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[2]/sqrt( x[1]^2+x[2]^2 )
+            s3 = 200.0*(x[3]-10.0*theta(x)) + 2.0*x[3]
+            ∇f = @SVector [s1, s2, s3]
+            return f(x), ∇f
+        else
+            return f(x)
+        end
     end
 
     x0 = [0.1, 0.1, 0.1]
@@ -81,12 +114,12 @@ using LinearAlgebra: norm, I
     shortname(::NearlyNewton.DirectApprox) = " (direct)"
 
     function printed_minimize(f∇f, x0, method, approx, B0)
-        res = minimize(f∇f, x0, method, approx, B0)
+        res = minimize(f∇f, x0, method, approx, B0, NearlyNewton.OptOptions())
         print("NN  $(shortname(method)) $(shortname(approx)): ")
         @printf("%2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     end
     function printed_minimize!(f∇f!, x0, method, approx, B0)
-        res = minimize!(f∇f!, x0, method, approx, B0)
+        res = minimize!(f∇f!, x0, method, approx, B0, NearlyNewton.OptOptions())
         print("NN! $(shortname(method)) $(shortname(approx)): ")
         @printf("%2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     end
@@ -96,13 +129,13 @@ using LinearAlgebra: norm, I
     printed_minimize!(f∇f!, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
     printed_minimize!(f∇f!, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
 
-    res = minimize(f∇f, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
+    res = minimize(f∇f, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I, NearlyNewton.OptOptions())
     @printf("NN  BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(f∇f!, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I, NearlyNewton.OptOptions())
     @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
+    res = minimize(f∇f, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I, NearlyNewton.OptOptions())
     @printf("NN  BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
+    res = minimize!(f∇f!, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I, NearlyNewton.OptOptions())
     @printf("NN! BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = optimize(f∇f!, x0, Optim.BFGS(linesearch=BackTracking()))
     @time optimize(f∇f!, x0, Optim.BFGS(linesearch=BackTracking()))
@@ -196,7 +229,7 @@ using LinearAlgebra: norm, I
                 return ∇f
             end
         end
-        
+
         storage
     end
 
@@ -312,3 +345,5 @@ using LinearAlgebra: norm, I
     @printf("NN  SR1(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
 end
+
+include("geometrytypes.jl")

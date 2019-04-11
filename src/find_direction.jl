@@ -1,4 +1,6 @@
-find_direction(scheme, approx, ::UniformScaling, ∇f) = -∇f
+function find_direction(scheme, approx, ::UniformScaling, ∇f)
+   -∇f
+end
 function find_direction(scheme, ::DirectApprox, A::AbstractArray, ∇f)
    -(A\∇f)
 end
@@ -10,7 +12,7 @@ find_direction(scheme, ::InverseApprox, A::AbstractArray, ∇f) = -A*∇f
 # do factorization another place for the possibility to do smart things
 
 function find_direction!(d::AbstractArray, scheme, approx, ::UniformScaling, ∇f)
-   @.d = -∇f
+   @. d = -∇f
    d
 end
 function find_direction!(d::AbstractArray, scheme, ::DirectApprox, B::AbstractArray, ∇f)
