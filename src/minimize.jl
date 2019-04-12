@@ -26,7 +26,7 @@ function preallocate_minimize_caches(x0)
 
     return x_curr, ∇f_next, ∇f_curr, d, Δx, x_next, y
 end
-function minimize!(f∇f!, x0, scheme, approx, B0, options::OptOptions)
+function minimize!(f∇f!, x0, scheme, approx, B0, options::OptOptions=OptOptions())
     c, g_tol, max_iter, show_trace = options.c, options.g_tol, options.max_iter, options.show_trace
 
     x_curr, ∇f_next, ∇f_curr, d, Δx, x_next, y = preallocate_minimize_caches(x0)
@@ -85,7 +85,7 @@ function iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, 
     return x_next, f_next, ∇f_next, B
 end
 
-function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions) where {T1}
+function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions=OptOptions()) where {T1}
 # function minimize(f::F1, ∇f::F2, x0, scheme, approx, B0) where {F1, F2}
     c, g_tol, max_iter, show_trace = options.c, options.g_tol, options.max_iter, options.show_trace
     lsoptions = LSOptions(0.5, 1e-4, 100, true)

@@ -16,8 +16,11 @@ function find_direction!(d::AbstractArray, scheme, approx, ::UniformScaling, ∇
    d
 end
 function find_direction!(d::AbstractArray, scheme, ::DirectApprox, B::AbstractArray, ∇f)
-   @. d = -∇f
-   ldiv!(cholesky(Symmetric(B)), d)
+   # danger zone, we don't check properly for conditions when updating so might
+   # not be pd
+   d .= -(B\∇f)
+   # @. d = -∇f
+   # ldiv!(cholesky(Symmetric(B)), d)
    d
 end
 function find_direction!(d, scheme, ::InverseApprox, A::AbstractArray, ∇f)
