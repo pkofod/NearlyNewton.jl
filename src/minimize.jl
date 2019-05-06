@@ -20,21 +20,21 @@ function preallocate_minimize_caches(x0)
     # Maintain the search direction in d
     d = similar(x0)
 
-    Δx = similar(x0)
+    s = similar(x0)
     x_next = similar(x0)
     y = similar(∇f_next)
 
-    return x_curr, ∇f_next, ∇f_curr, d, Δx, x_next, y
+    return x_curr, ∇f_next, ∇f_curr, d, s, x_next, y
 end
-function minimize!(f∇f!, x0, scheme, approx, B0, options::OptOptions=OptOptions())
+function minimize!(f∇f!, x0, scheme, B0, options::OptOptions=OptOptions())
     c, g_tol, max_iter, show_trace = options.c, options.g_tol, options.max_iter, options.show_trace
 
-    x_curr, ∇f_next, ∇f_curr, d, Δx, x_next, y = preallocate_minimize_caches(x0)
+    x_curr, ∇f_next, ∇f_curr, d, s, x_next, y = preallocate_minimize_caches(x0)
 
     # Update gradient
     x_next .= x0
     f_curr, ∇f_next = f∇f!(∇f_next, x_next)
-    x_next, f_next, ∇f_next, B = iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B0, Δx, y; first=true, c=c, g_tol=g_tol)
+    x_next, f_next, ∇f_next, B = iterate!(scheme, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B0, s, y; first=true, c=c, g_tol=g_tol)
 
     # Check for gradient convergence
     converged = norm(∇f_next) < g_tol
@@ -47,7 +47,7 @@ function minimize!(f∇f!, x0, scheme, approx, B0, options::OptOptions=OptOption
     while iter <= max_iter
         iter += 1
         f_curr = f_next
-        x_next, f_next, ∇f_next, B = iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; c=c, g_tol=g_tol)
+        x_next, f_next, ∇f_next, B = iterate!(scheme, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, s, y; c=c, g_tol=g_tol)
         # Check for gradient convergence
         converged = norm(∇f_next) < g_tol
 
@@ -58,18 +58,18 @@ function minimize!(f∇f!, x0, scheme, approx, B0, options::OptOptions=OptOption
     return x_next, ∇f_next, iter
 end
 
-function iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, Δx, y; first=false, c=0.001, g_tol=1e-8)
+function iterate!(scheme, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, s, y; first=false, c=0.001, g_tol=1e-8)
     copyto!(x_curr, x_next)
     copyto!(∇f_curr, ∇f_next)
 
     # Update current gradient and calculate the search direction
-    d = find_direction!(d, scheme, approx, B, ∇f_curr) # solve Bd = -∇f
+    d = find_direction!(d, B, ∇f_curr, scheme) # solve Bd = -∇f
     lsoptions = LSOptions(0.5, 1e-4, 100, true)
     # Perform line search along d
     α, f_α, ls_success = backtracking(f∇f!, x_curr, d, f_curr, ∇f_curr, 1.0, lsoptions)
     # Calculate final step vector and update the state
-    @. Δx = α * d
-    @. x_next = x_curr + Δx
+    @. s = α * d
+    @. x_next = x_curr + s
     # Update gradient
     f_next, ∇f_next = f∇f!(∇f_next, x_next)
     # Update y
@@ -80,12 +80,12 @@ function iterate!(scheme, approx, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, 
         Badj = B
     end
     # Quasi-Newton update
-    B = update!(scheme, approx, Badj, Δx, y)
+    B = update!(Badj, s, y, scheme)
 
     return x_next, f_next, ∇f_next, B
 end
 
-function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions=OptOptions()) where {T1}
+function minimize(f∇f::T1, x0, scheme, B0, options::OptOptions=OptOptions()) where {T1}
 # function minimize(f::F1, ∇f::F2, x0, scheme, approx, B0) where {F1, F2}
     c, g_tol, max_iter, show_trace = options.c, options.g_tol, options.max_iter, options.show_trace
     lsoptions = LSOptions(0.5, 1e-4, 100, true)
@@ -95,13 +95,13 @@ function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions=OptOpti
     # Update current gradient
     f_curr, ∇f_curr = f∇f(true, x_curr)
     # Find direction using Hessian approximation
-    d = find_direction(scheme, approx, B0, ∇f_curr)
+    d = find_direction(B0, ∇f_curr, scheme)
     # Perform a backtracking step
     α, f_α, ls_success = backtracking(f∇f, x_curr, d, f_curr, ∇f_curr, 1.0, lsoptions)
-    # Maintain the change in x in Δx
-    Δx = α * d
+    # Maintain the change in x in s
+    s = α * d
     # Maintain the new x in x_next
-    x_next = x_curr + Δx
+    x_next = x_curr + s
     # Update the gradient at the new point
     f_next, ∇f_next = f∇f(true, x_next)
     # Update y
@@ -110,7 +110,7 @@ function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions=OptOpti
     Badj = dot(y, d)/dot(y, y)*I
 
     # Update the approximation
-    B = update(scheme, approx, Badj, Δx, y)
+    B = update(Badj, s, y, scheme)
     iter = 0
     while iter <= max_iter
         iter += 1
@@ -119,14 +119,14 @@ function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions=OptOpti
         ∇f_curr = ∇f_next
 
         # Solve the system Bd = -∇f to find the search direction d
-        d = find_direction(scheme, approx, B, ∇f_curr)
+        d = find_direction(B, ∇f_curr, scheme)
         # Perform line search along d
         α, f_α, ls_success = backtracking(f∇f, x_curr, d, f_curr, ∇f_curr, 1.0, lsoptions)
         # Update change in x according to α from above
-        Δx = α * d
+        s = α * d
 
         # Take step
-        x_next = x_curr + Δx
+        x_next = x_curr + s
         # Update gradient
         f_next, ∇f_next = f∇f(true, x_next)
         # # Update y
@@ -140,7 +140,7 @@ function minimize(f∇f::T1, x0, scheme, approx, B0, options::OptOptions=OptOpti
         end
 
         # Quasi-Newton update
-        B = update(scheme, approx, B, Δx, y)
+        B = update(B, s, y, scheme)
 
     end
     return x_next, ∇f_next, iter

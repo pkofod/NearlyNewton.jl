@@ -1,4 +1,6 @@
-struct BFGS <: BroydenFamily  end
+struct BFGS{T1} <: QuasiNewton{T1}
+   approx::T1
+end
 # function update!(scheme::BFGS, B::DirectApprox, Δx, y)
 #    B.A = B.A + y*y'/dot(Δx, y) - B.A*y*y'*B.A/(y'*B.A*y)
 # end
@@ -6,24 +8,22 @@ struct BFGS <: BroydenFamily  end
 #    B.A = (I - Δx*y'/dot(y, Δx))*B.A*(I - y*Δx'/dot(y, Δx)) + Δx*Δx'/dot(y, Δx)
 # end
 #
-function update(scheme::BFGS, ::DirectApprox, B, s, y)
-   if dot(s, y) > 1e-2
-      first_update(B, s, y)
-   end
-   B
-end
-function update(scheme::BFGS, ::InverseApprox, H, s, y)
+function update(H, s, y, scheme::BFGS{<:InverseApprox})
    second_update(H, s, y)
 end
-function update!(scheme::BFGS, ::DirectApprox, A, s, y)
-   first_update!(A, s, y)
+function update(B, s, y, scheme::BFGS{<:DirectApprox})
+   first_update(B, s, y)
 end
-function update!(scheme::BFGS, ::InverseApprox, A, s, y)
+function update!(A, s, y, scheme::BFGS{<:InverseApprox})
    second_update!(A, s, y)
 end
-function update!(scheme::BFGS, approx::DirectApprox, A::UniformScaling, s, y)
-   update(scheme, approx, A, s, y)
+function update!(A, s, y, scheme::BFGS{<:DirectApprox})
+   first_update!(A, s, y)
 end
-function update!(scheme::BFGS, approx::InverseApprox, A::UniformScaling, s, y)
-   update(scheme, approx, A, s, y)
+
+function update!(A::UniformScaling, s, y, scheme::BFGS{<:InverseApprox})
+   update(A, s, y, scheme)
+end
+function update!(A::UniformScaling, s, y, scheme::BFGS{<:DirectApprox})
+   update(A, s, y, scheme)
 end

@@ -1,7 +1,7 @@
 using NearlyNewton
 using Test
 using StaticArrays
-using Optim
+#using Optim
 using LineSearches
 using Printf
 using LinearAlgebra: norm, I
@@ -69,239 +69,258 @@ using LinearAlgebra: norm, I
 
     x0 = [-1.0, 0.0, 0.0]
     xopt = [1.0, 0.0, 0.0]
+    x0s = @SVector [-1.0, 0.0, 0.0]
+
     println("Starting  from: ", x0)
     println("Targeting     : ", xopt)
 
-    shortname(::NearlyNewton.GradientDescent) = "GD  "
-    shortname(::NearlyNewton.InverseApprox) = "(inverse)"
+    shortname(::GradientDescent) = "GD  "
+    shortname(::InverseApprox) = "(inverse)"
     shortname(::NearlyNewton.DirectApprox) = " (direct)"
 
-    function printed_minimize(f∇f, x0, method, approx, B0)
-        res = minimize(f∇f, x0, method, approx, B0, NearlyNewton.OptOptions())
-        print("NN  $(shortname(method)) $(shortname(approx)): ")
+    function printed_minimize(f∇f, x0, method, B0)
+        res = minimize(f∇f, x0, method, B0, NearlyNewton.OptOptions())
+        print("NN  $(shortname(method)) $(shortname(method.approx)): ")
         @printf("%2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     end
-    function printed_minimize!(f∇f!, x0, method, approx, B0)
-        res = minimize!(f∇f!, x0, method, approx, B0, NearlyNewton.OptOptions())
-        print("NN! $(shortname(method)) $(shortname(approx)): ")
+    function printed_minimize!(f∇f!, x0, method, B0)
+        res = minimize!(f∇f!, x0, method, B0, NearlyNewton.OptOptions())
+        print("NN! $(shortname(method)) $(shortname(method.approx)): ")
         @printf("%2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     end
 
-    printed_minimize(f∇f, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    printed_minimize(f∇f, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    printed_minimize!(f∇f!, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    printed_minimize!(f∇f!, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
+    printed_minimize(f∇f, x0, GradientDescent(InverseApprox()), I)
+    printed_minimize!(f∇f!, x0, GradientDescent(InverseApprox()), I)
+    res = minimize(f∇fs, x0s, GradientDescent(InverseApprox()), I)
+    @printf("NN  GD(S) (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
 
-    res = minimize(f∇f, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I, NearlyNewton.OptOptions())
+    printed_minimize(f∇f, x0, GradientDescent(DirectApprox()), I)
+    printed_minimize!(f∇f!, x0, GradientDescent(DirectApprox()), I)
+    res = minimize(f∇fs, x0s, GradientDescent(DirectApprox()), I)
+    @printf("NN  GD(S)  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    println()
+
+    res = minimize(f∇f, x0, BFGS(InverseApprox()), I, NearlyNewton.OptOptions())
     @printf("NN  BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I, NearlyNewton.OptOptions())
+    res = minimize!(f∇f!, x0, BFGS(InverseApprox()), I, NearlyNewton.OptOptions())
     @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I, NearlyNewton.OptOptions())
+    res = minimize(f∇fs, x0s, BFGS(InverseApprox()), I)
+    @printf("NN  BFGS(S) (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+
+    res = minimize(f∇f, x0, BFGS(DirectApprox()), I, NearlyNewton.OptOptions())
     @printf("NN  BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I, NearlyNewton.OptOptions())
+    res = minimize!(f∇f!, x0, BFGS(DirectApprox()), I, NearlyNewton.OptOptions())
     @printf("NN! BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, x0s, BFGS(DirectApprox()), I)
+    @printf("NN  BFGS(S)  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    println()
     # res = optimize(f∇f!, x0, Optim.BFGS(linesearch=BackTracking()))
     # @time optimize(f∇f!, x0, Optim.BFGS(linesearch=BackTracking()))
     # @printf("OT! BFGS (inverse): %2.2e  %2.2e\n", norm(Optim.minimizer(res)-xopt,Inf), Optim.g_residual(res))
 
-    res = minimize(f∇f, x0, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  DFP  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! DFP  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, x0, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  DFP   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! DFP   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇f, x0, DFP(InverseApprox()), I)
+    @printf("NN  DFP    (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, x0, DFP(InverseApprox()), I)
+    @printf("NN! DFP    (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, x0s, DFP(InverseApprox()), I)
+    @printf("NN  DFP(S) (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇f, x0, DFP(DirectApprox()), I)
+    @printf("NN  DFP    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, x0, DFP(DirectApprox()), I)
+    @printf("NN! DFP    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, x0s, DFP(DirectApprox()), I)
+    @printf("NN  DFP(S) (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    println()
 
-    res = minimize(f∇f, x0, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize(f∇f, x0, SR1(InverseApprox()), I)
     @printf("NN  SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, x0, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(f∇f!, x0, SR1(InverseApprox()), I)
     @printf("NN! SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-
-    xrand = rand(3)
-    println("\nFrom a random point: ", xrand)
-    res = minimize(f∇f, xrand, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  GD   (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, xrand, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  GD    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! GD   (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! GD    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-
-    res = minimize(f∇f, xrand, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, xrand, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-
-    res = minimize(f∇f, xrand, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  DFP  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, xrand, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  DFP   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! DFP  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! DFP   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-
-    res = minimize(f∇f, xrand, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇f, xrand, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-
-
-    x0s = @SVector [-1.0, 0.0, 0.0]
-    println("\nStatic array input.")
-    res = minimize(f∇fs, x0s, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  GD(S)   (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  GD(S)    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  BFGS(S) (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  BFGS(S)  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  DFP(S)  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  DFP(S)   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize(f∇fs, x0s, SR1(InverseApprox()), I)
     @printf("NN  SR1(S)  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, x0s, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
+    res = minimize(f∇f, x0, SR1(DirectApprox()), I)
+    @printf("NN  SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, x0, SR1(DirectApprox()), I)
+    @printf("NN! SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, x0s, SR1(DirectApprox()), I)
     @printf("NN  SR1(S)   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
 
-    function himmelblau!(∇f, x)
+    xrand = rand(3)
+    xrands = SVector{3}(xrand)
+    println("\nFrom a random point: ", xrand)
+    res = minimize(f∇f, xrand, GradientDescent(InverseApprox()), I)
+    @printf("NN  GD   (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, GradientDescent(InverseApprox()), I)
+    @printf("NN! GD   (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇f, xrand, GradientDescent(DirectApprox()), I)
+    @printf("NN  GD    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, GradientDescent(DirectApprox()), I)
+    @printf("NN! GD    (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    println()
+    res = minimize(f∇f, xrand, BFGS(InverseApprox()), I)
+    @printf("NN  BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, BFGS(InverseApprox()), I)
+    @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇f, xrand, BFGS(DirectApprox()), I)
+    @printf("NN  BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, BFGS(DirectApprox()), I)
+    @printf("NN! BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    println()
 
+    res = minimize(f∇f, xrand, DFP(InverseApprox()), I)
+    @printf("NN  DFP  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, DFP(InverseApprox()), I)
+    @printf("NN! DFP  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇f, xrand, DFP(DirectApprox()), I)
+    @printf("NN  DFP   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, DFP(DirectApprox()), I)
+    @printf("NN! DFP   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    println()
+
+    res = minimize(f∇f, xrand, SR1(InverseApprox()), I)
+    @printf("NN  SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, SR1(InverseApprox()), I)
+    @printf("NN! SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, xrand, SR1(DirectApprox()), I)
+    @printf("NN  SR1(S)   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇f, xrand, SR1(DirectApprox()), I)
+    @printf("NN  SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize!(f∇f!, xrand, SR1(DirectApprox()), I)
+    @printf("NN! SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, xrand, SR1(DirectApprox()), I)
+    @printf("NN  SR1(S)   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+
+    println()
+
+
+    function himmelblau!(∇f, x)
+        f = (x[1]^2 + x[2] - 11)^2 + (x[1] + x[2]^2 - 7)^2
         if !(∇f == nothing)
             ∇f[1] = 4.0 * x[1]^3 + 4.0 * x[1] * x[2] -
                 44.0 * x[1] + 2.0 * x[1] + 2.0 * x[2]^2 - 14.0
             ∇f[2] = 2.0 * x[1]^2 + 2.0 * x[2] - 22.0 +
                 4.0 * x[1] * x[2] + 4.0 * x[2]^3 - 28.0 * x[2]
-        end
-
-        f = (x[1]^2 + x[2] - 11)^2 + (x[1] + x[2]^2 - 7)^2
-
-        if ∇f == nothing
-            return f
-        else
             return f, ∇f
+        else
+            return f
+        end
+    end
+
+    function himmelblaus(∇f, x)
+        f = (x[1]^2 + x[2] - 11)^2 + (x[1] + x[2]^2 - 7)^2
+        if !(∇f == nothing)
+            ∇f1 = 4.0 * x[1]^3 + 4.0 * x[1] * x[2] -
+                44.0 * x[1] + 2.0 * x[1] + 2.0 * x[2]^2 - 14.0
+            ∇f2 = 2.0 * x[1]^2 + 2.0 * x[2] - 22.0 +
+                4.0 * x[1] * x[2] + 4.0 * x[2]^3 - 28.0 * x[2]
+            return f, @SVector([∇f1, ∇f2])
+        else
+            return f
         end
     end
 
     himmelblau(∇f, x) = himmelblau!(∇f == nothing ? ∇f : similar(x), x)
 
-    himmelblau_gradient(x) = himmelblau_gradient!(similar(x), x)
 
     println("\nHimmelblau function")
     x0 = [3.0, 1.0]
-    res = minimize(himmelblau, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  GD   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
+    x0s = @SVector([3.0, 1.0])
+    res = minimize(himmelblau, x0, GradientDescent(InverseApprox()), I)
+    @printf("NN  GD    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, x0, GradientDescent(InverseApprox()), I)
+    @printf("NN! GD    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblaus, x0s, GradientDescent(InverseApprox()), I)
+    @printf("NN  GD(S) (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblau, x0, GradientDescent(DirectApprox()), I)
+    println()
     @printf("NN  GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! GD   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
+    res = minimize!(himmelblau, x0, GradientDescent(DirectApprox()), I)
     @printf("NN! GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblaus, x0s, GradientDescent(DirectApprox()), I)
+    @printf("NN  GD(S) (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    println()
 
-    res = minimize(himmelblau, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  BFGS (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
-    @printf("NN! BFGS (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN! BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    #res = optimize(himmelblau, x0, Optim.BFGS(linesearch=BackTracking()))
-    #@printf("OT! BFGS (inverse): %2.2e\n", Optim.g_residual(res))
+    res = minimize(himmelblau, x0, BFGS(InverseApprox()), I)
+    @printf("NN  BFGS    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, x0, BFGS(InverseApprox()), I)
+    @printf("NN! BFGS    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblau, x0s, BFGS(InverseApprox()), I)
+    @printf("NN  BFGS(S) (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    println()
+    res = minimize(himmelblau, x0, BFGS(DirectApprox()), I)
+    @printf("NN  BFGS    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, x0, BFGS(DirectApprox()), I)
+    @printf("NN! BFGS    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblau, x0s, BFGS(DirectApprox()), I)
+    @printf("NN  BFGS(S) (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    println()
 
-    res = minimize(himmelblau, x0, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
+    res = minimize(himmelblau, x0, DFP(InverseApprox()), I)
     @printf("NN  DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(himmelblau, x0, DFP(InverseApprox()), I)
     @printf("NN! DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
+    res = minimize(himmelblau, x0s, DFP(InverseApprox()), I)
+    @printf("NN  DFP(S)  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblau, x0, DFP(DirectApprox()), I)
+    println()
+    @printf("NN  DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, x0, DFP(DirectApprox()), I)
     @printf("NN! DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblau, x0s, DFP(DirectApprox()), I)
+    @printf("NN  DFP(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    println()
 
-    res = minimize(himmelblau, x0, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize(himmelblau, x0, SR1(InverseApprox()), I)
     @printf("NN  SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(himmelblau, x0, SR1(InverseApprox()), I)
     @printf("NN! SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
+    res = minimize(himmelblau, x0s, SR1(InverseApprox()), I)
+    @printf("NN  SR1(S)  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize(himmelblau, x0, SR1(DirectApprox()), I)
+    @printf("NN  SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, x0, SR1(DirectApprox()), I)
     @printf("NN! SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-
+    res = minimize(himmelblau, x0s, SR1(DirectApprox()), I)
+    @printf("NN  SR1(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    println()
     xrand = rand(2)
     println("\nFrom a random point: ", xrand)
 
-    res = minimize(himmelblau, xrand, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
+    res = minimize(himmelblau, xrand, GradientDescent(InverseApprox()), I)
     @printf("NN  GD   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, xrand, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(himmelblau, xrand, GradientDescent(InverseApprox()), I)
     @printf("NN! GD   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
+    res = minimize(himmelblau, xrand, GradientDescent(DirectApprox()), I)
+    @printf("NN  GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, xrand, GradientDescent(DirectApprox()), I)
     @printf("NN! GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
-    res = minimize(himmelblau, xrand, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
+    res = minimize(himmelblau, xrand, BFGS(InverseApprox()), I)
     @printf("NN  BFGS (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, xrand, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(himmelblau, xrand, BFGS(InverseApprox()), I)
     @printf("NN! BFGS (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
+    res = minimize(himmelblau, xrand, BFGS(DirectApprox()), I)
+    @printf("NN  BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau, xrand, BFGS(DirectApprox()), I)
     @printf("NN! BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
-    res = minimize(himmelblau, xrand, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
+    res = minimize(himmelblau, xrand, DFP(InverseApprox()), I)
     @printf("NN  DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, xrand, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(himmelblau,  xrand, DFP(InverseApprox()), I)
     @printf("NN! DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
+    res = minimize(himmelblau, xrand, DFP(DirectApprox()), I)
+    @printf("NN  DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau,  xrand, DFP(DirectApprox()), I)
     @printf("NN! DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
-    res = minimize(himmelblau, xrand, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize(himmelblau, xrand, SR1(InverseApprox()), I)
     @printf("NN  SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, xrand, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
+    res = minimize!(himmelblau,  xrand, SR1(InverseApprox()), I)
     @printf("NN! SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
+    res = minimize(himmelblau, xrand, SR1(DirectApprox()), I)
+    @printf("NN  SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
+    res = minimize!(himmelblau,  xrand, SR1(DirectApprox()), I)
     @printf("NN! SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-
-    x0s = @SVector [3.0, 1.0]
-    println("\nStatic array input.")
-    res = minimize(himmelblau, x0s, NearlyNewton.GradientDescent(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  GD(S)   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0s, NearlyNewton.GradientDescent(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  GD(S)    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-
-    res = minimize(himmelblau, x0s, NearlyNewton.BFGS(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  BFGS(S) (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0s, NearlyNewton.BFGS(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  BFGS(S)  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-
-    res = minimize(himmelblau, x0s, NearlyNewton.DFP(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  DFP(S)  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0s, NearlyNewton.DFP(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  DFP(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-
-    res = minimize(himmelblau, x0s, NearlyNewton.SR1(), NearlyNewton.InverseApprox(), I)
-    @printf("NN  SR1(S)  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize(himmelblau, x0s, NearlyNewton.SR1(), NearlyNewton.DirectApprox(), I)
-    @printf("NN  SR1(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
 end
 

@@ -1,6 +1,8 @@
-struct GradientDescent end
+struct GradientDescent{T1} <: QuasiNewton{T1}
+    approx::T1
+end
 # might want to clean this up
-update!(scheme::GradientDescent, B::InverseApprox, A::UniformScaling, rest...) = A
-update!(scheme::GradientDescent, B::DirectApprox, A, rest...) = A
-update(scheme::GradientDescent, B::InverseApprox, A::UniformScaling, rest...) = A
-update(scheme::GradientDescent, B::DirectApprox, A, rest...) = A
+update!(A::UniformScaling, s, y, scheme::GradientDescent{<:InverseApprox}) = A
+update!(A, s, y, scheme::GradientDescent{<:DirectApprox}) = A
+update(A::UniformScaling, s, y, scheme::GradientDescent{<:InverseApprox}) = A
+update(A, s, y, scheme::GradientDescent{<:DirectApprox}) = A
