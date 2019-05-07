@@ -50,9 +50,11 @@ function minimize!(f∇f!, x0, scheme, B0, options::OptOptions=OptOptions())
         x_next, f_next, ∇f_next, B = iterate!(scheme, f∇f!, f_curr, ∇f_curr, ∇f_next, x_curr, x_next, d, B, s, y; c=c, g_tol=g_tol)
         # Check for gradient convergence
         converged = norm(∇f_next) < g_tol
-
         if converged
             return x_next, ∇f_next, iter
+        end
+        if any(isnan.(x_next))
+            break
         end
     end
     return x_next, ∇f_next, iter

@@ -23,12 +23,12 @@ function backtracking(f∇f, x, d, f_0, ∇f_0, α_0, opt)
     iter = 0
 
     f_α = f∇f(nothing, x + α*d) # initial function value
-	is_solved = false
+	is_solved = isfinite(f_α) && f_α <= f_0 + c*α*t
     while !is_solved && iter <= ls_max_iter
         iter += 1
         β, α = α, α*ratio # backtrack according to specified ratio
         f_α = f∇f(nothing, x + α*d) # update function value
-		is_solved = isfinite(f_α) && f_0 - f_α >= α*t
+		is_solved = isfinite(f_α) && f_α <= f_0 + c*α*t
     end
 
 	ls_success = iter >= ls_max_iter ? false : true

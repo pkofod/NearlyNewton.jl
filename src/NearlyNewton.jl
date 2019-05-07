@@ -5,9 +5,6 @@ module NearlyNewton
 # used to get gradient descent for free out of Newton's method.
 using LinearAlgebra: dot, I, norm, mul!, cholesky, ldiv!, rmul!, UniformScaling, Symmetric, factorize
 
-struct InPlace end
-struct OutOfPlace end
-
 # Include the actual functions that expose the functionality in this package.
 include("hessian_object.jl")
 

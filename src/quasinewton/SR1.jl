@@ -4,26 +4,27 @@
 struct SR1{T1} <: QuasiNewton{T1}
    approx::T1
 end
-function update(A, s, y, scheme::SR1{<:InverseApprox})
-   sAy = s - A*y
-   A + sAy*sAy'/dot(sAy, y)
+function update(H, s, y, scheme::SR1{<:InverseApprox})
+   sHy = s - H*y
+   H + sHy*sHy'/dot(sHy, y)
 end
 function update(B, s, y, scheme::SR1{<:DirectApprox})
    yBs = y - B*s
-   if dot(yBs, s) < 1e-6
-      return B
-   else
-      return B + yBs*yBs'/dot(yBs, s)
+   d_yBs_s = inv(dot(yBs, s))
+   if d_yBs_s > 1e6
+      B += d_yBs_s*yBs*yBs'
    end
+   B
 end
-function update!(A, s, y, scheme::SR1{<:InverseApprox})
-   sAy = s - A*y
-   A .+= sAy*sAy'/dot(sAy, y)
+function update!(H, s, y, scheme::SR1{<:InverseApprox})
+   sHy = s - H*y
+   H .+= sHy*sHy'/dot(sHy, y)
 end
 function update!(B, s, y, scheme::SR1{<:DirectApprox})
    yBs = y - B*s
-   if dot(yBs, s) > 1e-6
-      B .+= yBs*yBs'/dot(yBs, s)
+   d_yBs_s = inv(dot(yBs, s))
+   if d_yBs_s > 1e6
+      B .+= d_yBs_s*yBs*yBs'
    end
    B
 end

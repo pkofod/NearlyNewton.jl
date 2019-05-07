@@ -9,16 +9,30 @@ end
 # end
 #
 function update(H, s, y, scheme::BFGS{<:InverseApprox})
-   second_update(H, s, y)
+   ρ = inv(dot(s, y))
+
+   if isfinite(ρ)
+      C = (I - ρ*s*y')
+      H = C*H*C' + ρ*s*s'
+   end
+   H
 end
 function update(B, s, y, scheme::BFGS{<:DirectApprox})
-   first_update(B, s, y)
+   ρ = inv(dot(s, y))
+   B + ρ*y*y' - B*s*s'*B/(s'*B*s)
 end
-function update!(A, s, y, scheme::BFGS{<:InverseApprox})
-   second_update!(A, s, y)
+function update!(H, s, y, scheme::BFGS{<:InverseApprox})
+   ρ = inv(dot(s, y))
+
+   if isfinite(ρ)
+      C = (I - ρ.*s*y')
+      H .= C*H*C' + ρ*s*s'
+   end
+   H
 end
-function update!(A, s, y, scheme::BFGS{<:DirectApprox})
-   first_update!(A, s, y)
+function update!(H, s, y, scheme::BFGS{<:DirectApprox})
+    ρ = inv(dot(s, y))
+    H .+= ρ*y*y' - H*(s*s')*H/(s'*H*s)
 end
 
 function update!(A::UniformScaling, s, y, scheme::BFGS{<:InverseApprox})
