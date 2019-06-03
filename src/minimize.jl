@@ -1,15 +1,9 @@
 include("linesearch/ls_optimize.jl")
 
 using InteractiveUtils
-function minimize(f∇f::T1, x0, scheme, B0, options::OptOptions=OptOptions(), linesearch::T2 = BackTracking()) where {T1, T2}
-# function minimize(f::F1, ∇f::F2, x0, scheme, approx, B0) where {F1, F2}
-
-
-
+function minimize(f∇f::T1, x0, scheme, B0=I, options::OptOptions=OptOptions(), linesearch::T2 = BackTracking()) where {T1, T2}
+    @code_warntype preallocate_qn_caches(x0)
     cache = preallocate_qn_caches(x0)
-
-    g_tol, max_iter, show_trace = options.g_tol, options.max_iter, options.show_trace
-
     # Maintain current state in x_curr
     cache.x_next = x0
 
@@ -19,14 +13,14 @@ function minimize(f∇f::T1, x0, scheme, B0, options::OptOptions=OptOptions(), l
     f_next, B = iterate(cache, scheme, linesearch, f∇f, f_next, B0, options)
 
     iter = 0
-    while iter <= max_iter
+    while iter <= options.max_iter
         iter += 1
 
         f_curr = f_next
         f_next, B = iterate(cache, scheme, linesearch, f∇f, f_curr, B, options, false)
 
         # Check for gradient convergence
-        if norm(cache.∇f_next) < g_tol || any(isnan.(cache.x_next))
+        if norm(cache.∇f_next) < options.g_tol || any(isnan.(cache.x_next))
             return cache.x_next, cache.∇f_next, iter
         end
     end
@@ -35,8 +29,6 @@ function minimize(f∇f::T1, x0, scheme, B0, options::OptOptions=OptOptions(), l
 end
 
 function iterate(cache, scheme, linesearch::LineSearch, f∇f, f_curr, B, options, is_first=nothing)
-    g_tol = options.g_tol
-
     # This just moves all "next"s into "curr"s.
     shift!(cache)
 

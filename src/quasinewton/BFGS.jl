@@ -19,6 +19,7 @@ function update(H, s, y, scheme::BFGS{<:InverseApprox})
          H = H + zero(eltype(s))*s*y'
       end
    end
+
    H
 end
 function update(B, s, y, scheme::BFGS{<:DirectApprox})

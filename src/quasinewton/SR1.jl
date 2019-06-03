@@ -13,6 +13,10 @@ function update(B, s, y, scheme::SR1{<:DirectApprox})
    d_yBs_s = inv(dot(yBs, s))
    if d_yBs_s > 1e6
       B += d_yBs_s*yBs*yBs'
+   else
+      if isa(B, UniformScaling)
+         B = B + zero(eltype(s))*s*s'
+      end
    end
    B
 end
@@ -25,6 +29,10 @@ function update!(B, s, y, scheme::SR1{<:DirectApprox})
    d_yBs_s = inv(dot(yBs, s))
    if d_yBs_s > 1e6
       B .+= d_yBs_s*yBs*yBs'
+   else
+      if isa(B, UniformScaling)
+         B = B + zero(eltype(s))*s*y'
+      end
    end
    B
 end

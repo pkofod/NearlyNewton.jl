@@ -19,6 +19,10 @@ function update(B, s, y, scheme::DFP{<:DirectApprox})
     if ρ > 1e6
         C = (I - ρ*y*s')
         B = C*B*C' + ρ*y*y'
+    else
+        if isa(B, UniformScaling)
+            B = B + zero(eltype(s))* y * s'
+        end
     end
     B
 end

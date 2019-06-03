@@ -331,7 +331,7 @@ include("geometrytypes.jl")
 
 @testset "no-alloc static" begin
 
-    function theta(x)
+    const function theta(x)
         if x[1] > 0
             return atan(x[2] / x[1]) / (2.0 * pi)
         else
@@ -339,21 +339,21 @@ include("geometrytypes.jl")
         end
     end
 
-    function fletcher_powell_fg_static(∇f, x)
+    const function fletcher_powell_fg_static(∇f, x::AbstractArray{T}) where T
         theta_x = theta(x)
 
         if !(∇f==nothing)
-            if ( x[1]^2 + x[2]^2 == 0 )
-                dtdx1 = 0;
-                dtdx2 = 0;
+            if x[1]^2 + x[2]^2 == 0
+                dtdx1 = T(0)
+                dtdx2 = T(0)
             else
-                dtdx1 = - x[2] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) );
-                dtdx2 =   x[1] / ( 2 * pi * ( x[1]^2 + x[2]^2 ) );
+                dtdx1 = - x[2] / ( T(2) * pi * ( x[1]^2 + x[2]^2 ) )
+                dtdx2 =   x[1] / ( T(2) * pi * ( x[1]^2 + x[2]^2 ) )
             end
             ∇f1 = -2000.0*(x[3]-10.0*theta_x)*dtdx1 +
-                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[1]/sqrt( x[1]^2+x[2]^2 );
+                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[1]/sqrt( x[1]^2+x[2]^2 )
             ∇f2 = -2000.0*(x[3]-10.0*theta_x)*dtdx2 +
-                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[2]/sqrt( x[1]^2+x[2]^2 );
+                200.0*(sqrt(x[1]^2+x[2]^2)-1)*x[2]/sqrt( x[1]^2+x[2]^2 )
             ∇f3 =  200.0*(x[3]-10.0*theta_x) + 2.0*x[3];
             ∇f = @SVector[∇f1, ∇f2, ∇f3]
         end

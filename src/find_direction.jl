@@ -1,10 +1,9 @@
 find_direction(::UniformScaling, ∇f, scheme) = -∇f
-function find_direction(A::AbstractArray, ∇f, scheme)
-   if typeof(scheme.approx) <: DirectApprox
-      return -(A\∇f)
-   else
-      return -A*∇f
-   end
+function find_direction(A::AbstractArray, ∇f, scheme::QuasiNewton{<:DirectApprox})
+   return -(A\∇f)
+end
+function find_direction(A::AbstractArray, ∇f, scheme::QuasiNewton{<:InverseApprox})
+   return -A*∇f
 end
 
 # solve the linear system Bx = ∇f for x inplace
