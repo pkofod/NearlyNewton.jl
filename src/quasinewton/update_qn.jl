@@ -10,7 +10,7 @@ struct QNCache{T1, T2}
     s::T2 # final step
 end
 function QNCache(x, g)
-    QNCache(similar(g), similar(g), similar(g), similar(x), similar(x), similar(x), similar(x))
+    QNCache(copy(g), copy(g), copy(g), copy(x), copy(x), copy(x), copy(x))
 end
 mutable struct MQNCache{T1, T2}
     ∇f_curr::T1 # gradient before step is taken
@@ -22,7 +22,7 @@ mutable struct MQNCache{T1, T2}
     s::T2 # final step
 end
 function MQNCache(x, g)
-    MQNCache(similar(g), similar(g), similar(g), similar(x), similar(x), similar(x), similar(x))
+    MQNCache(copy(g), copy(g), copy(g), copy(x), copy(x), copy(x), copy(x))
 end
 
 function preallocate_qn_caches_inplace(x0)
@@ -74,12 +74,12 @@ function update_qn(cache::MQNCache, B, scheme, first=false)
 
     # Update B
     if first
-        Badj = dot(y, d)/dot(y, y)*I
+        Badj = dot(cache.y, cache.d)/dot(cache.y, cache.y)*I
     else
         Badj = B
     end
     # Quasi-Newton update
-    B = update(Badj, s, cache.y, scheme)
+    B = update(Badj, cache.s, cache.y, scheme)
 
     return B
 end

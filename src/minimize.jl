@@ -11,36 +11,18 @@ function minimize(f∇f::T1, x0, scheme, B0, options::OptOptions=OptOptions()) w
     g_tol, max_iter, show_trace = options.g_tol, options.max_iter, options.show_trace
 
     # Maintain current state in x_curr
-
-
     cache.x_curr = x0
+
     # Update current gradient
     f_curr, cache.∇f_curr = f∇f(true, cache.x_curr)
-    # Find direction using Hessian approximation
-    cache.d = find_direction(B0, cache.∇f_curr, scheme)
-    # Perform a backtracking step
-    α, f_α, ls_success = linesearch(f∇f, cache.x_curr, cache.d, f_curr, cache.∇f_curr, 1.0)
-    # Maintain the change in x in s
-    cache.s = α * cache.d
-    # Maintain the new x in x_next
-    cache.x_next = cache.x_curr + cache.s
-    # Update the gradient at the new point
-    f_next, cache.∇f_next = f∇f(true, cache.x_next)
-    # Update y
-    cache.y = cache.∇f_next - cache.∇f_curr
-    # Badj = α*I
-    Badj = dot(cache.y, cache.d)/dot(cache.y, cache.y)*I
 
-    # Update the approximation
-    B = update(Badj, cache.s, cache.y, scheme)
+    f_next, B = iterate(cache, scheme, linesearch, f∇f, f_curr, B0, true; g_tol=options.g_tol)
+
     iter = 0
-
-
     while iter <= max_iter
         iter += 1
 
         f_curr = f_next
-
         f_next, B = iterate(cache, scheme, linesearch, f∇f, f_curr, B; g_tol=options.g_tol)
 
         # Check for gradient convergence
@@ -52,7 +34,7 @@ function minimize(f∇f::T1, x0, scheme, B0, options::OptOptions=OptOptions()) w
     return cache.x_next, cache.∇f_next, iter
 end
 
-function iterate(cache, scheme, linesearch::LineSearch, f∇f, f_curr, B, first=false; g_tol=1e-8)
+function iterate(cache, scheme, linesearch::LineSearch, f∇f::T, f_curr, B, first=false; g_tol=1e-8) where T
     # This just moves all "next"s into "curr"s.
     shift!(cache)
 

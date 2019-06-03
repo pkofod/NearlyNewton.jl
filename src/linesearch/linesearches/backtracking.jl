@@ -5,7 +5,7 @@ struct BackTracking{T1, T2} <: LineSearch
 	verbose::Bool
 end
 BackTracking(; ratio=0.5, c=1e-4, max_iter=100, verbose=true) = BackTracking(ratio, c, max_iter, verbose)
-function (ls::BackTracking)(f∇f, x, d, f_0, ∇f_0, α_0)
+function (ls::BackTracking)(f∇f::T, x, d, f_0, ∇f_0, α_0) where T
     opt = LSOptions(ls.ratio, ls.c, ls.max_iter, ls.verbose)
 	backtracking(f∇f, x, d, f_0, ∇f_0, α_0, opt)
 end
@@ -18,7 +18,7 @@ struct LSOptions{T1, T2, T3}
 end
 
 LSOptions(;ratio=0.5, c=1e-4, max_iter=100, verbose=false) = LSOptions(ratio, c, max_iter, verbose)
-function backtracking(f∇f, x, d, f_0, ∇f_0, α_0, opt)
+function backtracking(f∇f::T, x, d, f_0, ∇f_0, α_0, opt) where T
 	ratio, c, max_iter, verbose = opt.ratio, opt.c, opt.max_iter, opt.verbose
 
 
