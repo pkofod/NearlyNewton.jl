@@ -19,7 +19,7 @@ function minimize!(f∇f!, x0, approach::Tuple{<:Any, <:LineSearch}, B0,
     f_curr = f∇f!(cache.∇f_next, cache.x_next)
 
     # first iteration
-    f_next, B = iterate!(cache, scheme, linesearch, f∇f!, f_curr, B0, true; g_tol=options.g_tol)
+    f_next, B = iterate!(cache, scheme, linesearch, f∇f!, f_curr, options, B0)
 
     # Check for gradient convergence
     if converged(cache, options.g_tol)
@@ -34,7 +34,7 @@ function minimize!(f∇f!, x0, approach::Tuple{<:Any, <:LineSearch}, B0,
         f_curr = f_next
 
         # take a step and update approximation
-        f_next, B = iterate!(cache, scheme, linesearch, f∇f!, f_curr, B; g_tol=options.g_tol)
+        f_next, B = iterate!(cache, scheme, linesearch, f∇f!, f_curr, options, B, false)
 
         # Check for gradient convergence
         if converged(cache, options.g_tol)
@@ -44,7 +44,8 @@ function minimize!(f∇f!, x0, approach::Tuple{<:Any, <:LineSearch}, B0,
     return cache.x_next, cache.∇f_next, iter
 end
 
-function iterate!(cache, scheme, linesearch::LineSearch, f∇f!, f_curr, B, first=false; g_tol=1e-8)
+function iterate!(cache, scheme, linesearch::LineSearch, f∇f!, f_curr, options, B, is_first=nothing)
+    g_tol = options.g_tol
     ∇f_curr, ∇f_next, y, x_curr, x_next, d, s = cache.∇f_curr, cache.∇f_next, cache.y, cache.x_curr, cache.x_next, cache.d, cache.s
 
     # This just moves all "next"s into "curr"s.
@@ -63,7 +64,7 @@ function iterate!(cache, scheme, linesearch::LineSearch, f∇f!, f_curr, B, firs
     # Update gradient
     f_next = f∇f!(∇f_next, x_next)
 
-    B = update_qn!(cache, B, scheme, first)
+    B = update_qn!(cache, B, scheme, is_first)
 
     return f_next, B
 end

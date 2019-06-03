@@ -14,6 +14,10 @@ function update(H, s, y, scheme::BFGS{<:InverseApprox})
    if isfinite(ρ)
       C = (I - ρ*s*y')
       H = C*H*C' + ρ*s*s'
+   else
+      if typeof(H)<:UniformScaling
+         H = H + zero(eltype(s))*s*y'
+      end
    end
    H
 end
@@ -27,6 +31,10 @@ function update!(H, s, y, scheme::BFGS{<:InverseApprox})
    if isfinite(ρ)
       C = (I - ρ.*s*y')
       H .= C*H*C' + ρ*s*s'
+   else
+      if typeof(H)<:UniformScaling
+         H = H + zero(eltype(s))*s*y'
+      end
    end
    H
 end

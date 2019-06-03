@@ -50,13 +50,13 @@ function shift!(qnc::MQNCache)
 end
 
 
-function update_qn!(cache::QNCache, B, scheme, first=false)
+function update_qn!(cache::QNCache, B, scheme, is_first=nothing)
     d, s, y, ∇f_next, ∇f_curr = cache.d, cache.s, cache.y, cache.∇f_next, cache.∇f_curr
     # Update y
     @. y = ∇f_next - ∇f_curr
 
     # Update B
-    if first
+    if isa(is_first, Nothing)
         Badj = dot(y, d)/dot(y, y)*I
     else
         Badj = B
@@ -67,13 +67,13 @@ function update_qn!(cache::QNCache, B, scheme, first=false)
     return B
 end
 
-function update_qn(cache::MQNCache, B, scheme, first=false)
+function update_qn(cache::MQNCache, B, scheme, is_first=nothing)
     d, s, ∇f_next, ∇f_curr = cache.d, cache.s, cache.∇f_next, cache.∇f_curr
     # Update y
     cache.y = @. ∇f_next - ∇f_curr
 
     # Update B
-    if first
+    if isa(is_first, Nothing)
         Badj = dot(cache.y, cache.d)/dot(cache.y, cache.y)*I
     else
         Badj = B
