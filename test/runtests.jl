@@ -2,7 +2,7 @@ using NearlyNewton
 using Test
 using StaticArrays
 #using Optim
-using LineSearches
+#using LineSearches
 using Printf
 using LinearAlgebra: norm, I
 @testset "NearlyNewton.jl" begin
@@ -32,15 +32,12 @@ using LinearAlgebra: norm, I
             ∇f[3] =  200.0*(x[3]-10.0*theta(x)) + 2.0*x[3];
         end
 
-        if ∇f == nothing
-            return f(x)
-        else
-            return f(x), ∇f
-        end
+        return f(x)
     end
     function f∇f(∇f, x)
         if !(∇f == nothing)
-            return f∇f!(similar(x), x)
+            gx = similar(x)
+            return f∇f!(gx, x), gx
         else
             return f∇f!(∇f, x)
         end
@@ -102,7 +99,7 @@ using LinearAlgebra: norm, I
 
     res = minimize(f∇f, x0, BFGS(InverseApprox()), I, NearlyNewton.OptOptions())
     @printf("NN  BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, x0, BFGS(InverseApprox()), I, NearlyNewton.OptOptions())
+    res = minimize!(f∇f!, x0, (BFGS(InverseApprox()), BackTracking()), I, NearlyNewton.OptOptions())
     @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = minimize(f∇fs, x0s, BFGS(InverseApprox()), I)
     @printf("NN  BFGS(S) (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
@@ -159,7 +156,7 @@ using LinearAlgebra: norm, I
     println()
     res = minimize(f∇f, xrand, BFGS(InverseApprox()), I)
     @printf("NN  BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize!(f∇f!, xrand, BFGS(InverseApprox()), I)
+    res = minimize!(f∇f!, xrand, (BFGS(InverseApprox()), BackTracking()), I)
     @printf("NN! BFGS (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = minimize(f∇f, xrand, BFGS(DirectApprox()), I)
     @printf("NN  BFGS  (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
@@ -181,8 +178,8 @@ using LinearAlgebra: norm, I
     @printf("NN  SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = minimize!(f∇f!, xrand, SR1(InverseApprox()), I)
     @printf("NN! SR1  (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
-    res = minimize(f∇fs, xrand, SR1(DirectApprox()), I)
-    @printf("NN  SR1(S)   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
+    res = minimize(f∇fs, xrand, SR1(InverseApprox()), I)
+    @printf("NN  SR1(S)   (inverse): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = minimize(f∇f, xrand, SR1(DirectApprox()), I)
     @printf("NN  SR1   (direct): %2.2e  %2.2e  %d\n", norm(res[1]-xopt,Inf), norm(res[2], Inf), res[3])
     res = minimize!(f∇f!, xrand, SR1(DirectApprox()), I)
@@ -200,10 +197,8 @@ using LinearAlgebra: norm, I
                 44.0 * x[1] + 2.0 * x[1] + 2.0 * x[2]^2 - 14.0
             ∇f[2] = 2.0 * x[1]^2 + 2.0 * x[2] - 22.0 +
                 4.0 * x[1] * x[2] + 4.0 * x[2]^3 - 28.0 * x[2]
-            return f, ∇f
-        else
-            return f
         end
+        return f
     end
 
     function himmelblaus(∇f, x)
@@ -219,7 +214,15 @@ using LinearAlgebra: norm, I
         end
     end
 
-    himmelblau(∇f, x) = himmelblau!(∇f == nothing ? ∇f : similar(x), x)
+    function himmelblau(∇f, x)
+        g = ∇f == nothing ? ∇f : similar(x)
+        if !isa(∇f, Nothing)
+            fx = himmelblau!(g, x)
+            return fx, g
+        else
+            return himmelblau!(g, x)
+        end
+    end
 
 
     println("\nHimmelblau function")
@@ -227,14 +230,14 @@ using LinearAlgebra: norm, I
     x0s = @SVector([3.0, 1.0])
     res = minimize(himmelblau, x0, GradientDescent(InverseApprox()), I)
     @printf("NN  GD    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, GradientDescent(InverseApprox()), I)
+    res = minimize!(himmelblau!, x0, GradientDescent(InverseApprox()), I)
     @printf("NN! GD    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblaus, x0s, GradientDescent(InverseApprox()), I)
     @printf("NN  GD(S) (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0, GradientDescent(DirectApprox()), I)
     println()
     @printf("NN  GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, GradientDescent(DirectApprox()), I)
+    res = minimize!(himmelblau!, x0, GradientDescent(DirectApprox()), I)
     @printf("NN! GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblaus, x0s, GradientDescent(DirectApprox()), I)
     @printf("NN  GD(S) (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
@@ -242,14 +245,14 @@ using LinearAlgebra: norm, I
 
     res = minimize(himmelblau, x0, BFGS(InverseApprox()), I)
     @printf("NN  BFGS    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, BFGS(InverseApprox()), I)
+    res = minimize!(himmelblau!, x0, BFGS(InverseApprox()), I)
     @printf("NN! BFGS    (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0s, BFGS(InverseApprox()), I)
     @printf("NN  BFGS(S) (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     println()
     res = minimize(himmelblau, x0, BFGS(DirectApprox()), I)
     @printf("NN  BFGS    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, BFGS(DirectApprox()), I)
+    res = minimize!(himmelblau!, x0, BFGS(DirectApprox()), I)
     @printf("NN! BFGS    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0s, BFGS(DirectApprox()), I)
     @printf("NN  BFGS(S) (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
@@ -257,14 +260,14 @@ using LinearAlgebra: norm, I
 
     res = minimize(himmelblau, x0, DFP(InverseApprox()), I)
     @printf("NN  DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, DFP(InverseApprox()), I)
+    res = minimize!(himmelblau!, x0, DFP(InverseApprox()), I)
     @printf("NN! DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0s, DFP(InverseApprox()), I)
     @printf("NN  DFP(S)  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0, DFP(DirectApprox()), I)
     println()
     @printf("NN  DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, DFP(DirectApprox()), I)
+    res = minimize!(himmelblau!, x0, DFP(DirectApprox()), I)
     @printf("NN! DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0s, DFP(DirectApprox()), I)
     @printf("NN  DFP(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
@@ -272,13 +275,13 @@ using LinearAlgebra: norm, I
 
     res = minimize(himmelblau, x0, SR1(InverseApprox()), I)
     @printf("NN  SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, SR1(InverseApprox()), I)
+    res = minimize!(himmelblau!, x0, SR1(InverseApprox()), I)
     @printf("NN! SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0s, SR1(InverseApprox()), I)
     @printf("NN  SR1(S)  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0, SR1(DirectApprox()), I)
     @printf("NN  SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, x0, SR1(DirectApprox()), I)
+    res = minimize!(himmelblau!, x0, SR1(DirectApprox()), I)
     @printf("NN! SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, x0s, SR1(DirectApprox()), I)
     @printf("NN  SR1(S)   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
@@ -288,38 +291,38 @@ using LinearAlgebra: norm, I
 
     res = minimize(himmelblau, xrand, GradientDescent(InverseApprox()), I)
     @printf("NN  GD   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, GradientDescent(InverseApprox()), I)
+    res = minimize!(himmelblau!, xrand, GradientDescent(InverseApprox()), I)
     @printf("NN! GD   (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, xrand, GradientDescent(DirectApprox()), I)
     @printf("NN  GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, GradientDescent(DirectApprox()), I)
+    res = minimize!(himmelblau!, xrand, GradientDescent(DirectApprox()), I)
     @printf("NN! GD    (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
     res = minimize(himmelblau, xrand, BFGS(InverseApprox()), I)
     @printf("NN  BFGS (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, BFGS(InverseApprox()), I)
+    res = minimize!(himmelblau!, xrand, BFGS(InverseApprox()), I)
     @printf("NN! BFGS (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, xrand, BFGS(DirectApprox()), I)
     @printf("NN  BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau, xrand, BFGS(DirectApprox()), I)
+    res = minimize!(himmelblau!, xrand, BFGS(DirectApprox()), I)
     @printf("NN! BFGS  (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
     res = minimize(himmelblau, xrand, DFP(InverseApprox()), I)
     @printf("NN  DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, DFP(InverseApprox()), I)
+    res = minimize!(himmelblau!,  xrand, DFP(InverseApprox()), I)
     @printf("NN! DFP  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, xrand, DFP(DirectApprox()), I)
     @printf("NN  DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, DFP(DirectApprox()), I)
+    res = minimize!(himmelblau!,  xrand, DFP(DirectApprox()), I)
     @printf("NN! DFP   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
     res = minimize(himmelblau, xrand, SR1(InverseApprox()), I)
     @printf("NN  SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, SR1(InverseApprox()), I)
+    res = minimize!(himmelblau!,  xrand, SR1(InverseApprox()), I)
     @printf("NN! SR1  (inverse): %2.2e  %d\n", norm(res[2], Inf), res[3])
     res = minimize(himmelblau, xrand, SR1(DirectApprox()), I)
     @printf("NN  SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
-    res = minimize!(himmelblau,  xrand, SR1(DirectApprox()), I)
+    res = minimize!(himmelblau!,  xrand, SR1(DirectApprox()), I)
     @printf("NN! SR1   (direct): %2.2e  %d\n", norm(res[2], Inf), res[3])
 
 end

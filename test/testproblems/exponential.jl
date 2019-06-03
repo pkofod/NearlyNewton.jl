@@ -7,11 +7,7 @@ function exponential_fg!(∇f, x)
 
     fx = exp((2.0 - x[1])^2) + exp((3.0 - x[2])^2)
 
-    if ∇f == nothing
-        return fx
-    else
-        return fx, ∇f
-    end
+    return fx
 end
 
 

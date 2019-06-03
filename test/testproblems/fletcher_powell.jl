@@ -27,11 +27,7 @@ function fletcher_powell_fg!(∇f, x)
 
     fx = 100.0 * ((x[3] - 10.0 * theta_x)^2 + (sqrt(x[1]^2 + x[2]^2) - 1.0)^2) + x[3]^2
 
-    if ∇f == nothing
-        return fx
-    else
-        return fx, ∇f
-    end
+    return fx
 end
 
 tp_fletch_powell_fg! = TestProblem(fletcher_powell_fg!, [-1.0, 0.0, 0.0], I, NearlyNewton.OptOptions())
