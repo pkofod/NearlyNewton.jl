@@ -4,29 +4,16 @@ struct BackTracking{T1, T2} <: LineSearch
 	max_iter::T2
 	verbose::Bool
 end
-BackTracking(; ratio=0.5, c=1e-4, max_iter=100, verbose=true) = BackTracking(ratio, c, max_iter, verbose)
+BackTracking(; ratio=0.5, c=1e-4, max_iter=50, verbose=false) = BackTracking(ratio, c, max_iter, verbose)
 function (ls::BackTracking)(f∇f::T, x, d, f_0, ∇f_0, α_0) where T
-    opt = LSOptions(ls.ratio, ls.c, ls.max_iter, ls.verbose)
-	backtracking(f∇f, x, d, f_0, ∇f_0, α_0, opt)
-end
-
-struct LSOptions{T1, T2, T3}
-    ratio::T1
-	c::T1
-	max_iter::T2
-	verbose::T3
-end
-
-LSOptions(;ratio=0.5, c=1e-4, max_iter=100, verbose=false) = LSOptions(ratio, c, max_iter, verbose)
-function backtracking(f∇f::T, x, d, f_0, ∇f_0, α_0, opt) where T
-	ratio, c, max_iter, verbose = opt.ratio, opt.c, opt.max_iter, opt.verbose
+	ratio, c, max_iter, verbose = ls.ratio, ls.c, ls.max_iter, ls.verbose
 
 
-    # if verbose
-    #     println("Entering line search with step size: ", α_0)
-    #     println("Initial value: ", f(x))
-    #     println("Value at first step: ", f(x+α_0*d))
-    # end
+    if verbose
+        println("Entering line search with step size: ", α_0)
+        println("Initial value: ", f_0)
+        println("Value at first step: ", f∇f(nothing, x+α_0*d))
+    end
 
 	m = dot(d, ∇f_0)
     t = -c*m

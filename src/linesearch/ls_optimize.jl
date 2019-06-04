@@ -19,27 +19,18 @@ function minimize!(f∇f!, x0, approach::Tuple{<:Any, <:LineSearch}, B0,
     f_curr = f∇f!(cache.∇f_next, cache.x_next)
 
     # first iteration
-    f_next, B = iterate!(cache, scheme, linesearch, f∇f!, f_curr, options, B0)
-
-    # Check for gradient convergence
-    if converged(cache, options.g_tol)
-        return cache.x_next, cache.∇f_next, iter
-    end
+    f_next, B, is_converged = iterate!(cache, scheme, linesearch, f∇f!, f_curr, options, B0)
 
     iter = 0
-    while iter <= options.max_iter
+    while iter <= options.max_iter && !is_converged
         iter += 1
 
         # save last objective value
         f_curr = f_next
 
         # take a step and update approximation
-        f_next, B = iterate!(cache, scheme, linesearch, f∇f!, f_curr, options, B, false)
+        f_next, B, is_converged = iterate!(cache, scheme, linesearch, f∇f!, f_curr, options, B, false)
 
-        # Check for gradient convergence
-        if converged(cache, options.g_tol)
-            return cache.x_next, cache.∇f_next, iter
-        end
     end
     return cache.x_next, cache.∇f_next, iter
 end
@@ -66,10 +57,63 @@ function iterate!(cache, scheme, linesearch::LineSearch, f∇f!, f_curr, options
 
     B = update_qn!(cache, B, scheme, is_first)
 
-    return f_next, B
+    # Check for gradient convergence
+    is_converged = converged(cache.x_next, cache.∇f_next, options.g_tol)
+
+    return f_next, B, is_converged
 end
 
-function converged(cache, g_tol)
-    g_converged = norm(cache.∇f_next) < g_tol
-    return g_converged || any(isnan.(cache.x_next))
+function converged(x_next, ∇f_next, g_tol)
+    g_converged = norm(∇f_next) < g_tol
+    return g_converged || any(isnan.(x_next))
+end
+
+function minimize(f∇f::T1, x0, scheme, B0=I, options::OptOptions=OptOptions(), linesearch::T2 = BackTracking()) where {T1, T2}
+
+    # Maintain current state in x_curr
+    x_next = copy(x0)
+
+    # Update current gradient
+    f_next, ∇f_next = f∇f(true, x_next)
+
+    ∇f_curr = copy(∇f_next)
+    x_curr = copy(x_next)
+    f_curr = f_next
+    x_next, f_next, ∇f_next, B, is_converged = iterate(∇f_curr, x_curr, scheme, linesearch, f∇f, f_next, B0, options)
+
+    iter = 0
+    while iter <= options.max_iter && !is_converged
+        iter += 1
+
+        f_curr = f_next
+        ∇f_curr = copy(∇f_next)
+        x_curr = copy(x_next)
+        x_next, f_next, ∇f_next, B, is_converged = iterate(∇f_curr, x_curr, scheme, linesearch, f∇f, f_curr, B, options, false)
+
+    end
+
+    return x_next, ∇f_next, iter
+end
+
+function iterate(∇f_curr, x_curr, scheme, linesearch::LineSearch, f∇f, f_curr, B, options, is_first=nothing)
+    # Update current gradient and calculate the search direction
+    d = find_direction(B, ∇f_curr, scheme) # solve Bd = -∇f
+
+    # # Perform line search along d
+    α, f_α, ls_success = linesearch(f∇f, x_curr, d, f_curr, ∇f_curr, 1.0)
+    # return α, f_α, ls_success
+
+    # # Calculate final step vector and update the state
+    s = @. α * d
+    x_next = @. x_curr + s
+
+    # # Update gradient
+    f_next, ∇f_next = f∇f(∇f_curr, x_next)
+
+    B = update_qn(d, s, ∇f_curr, ∇f_next, B, scheme, is_first)
+
+    # Check for gradient convergence
+    is_converged = converged(x_next, ∇f_next, options.g_tol)
+    
+    return x_next, f_next, ∇f_next, B, is_converged
 end

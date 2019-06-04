@@ -331,7 +331,7 @@ include("geometrytypes.jl")
 
 @testset "no-alloc static" begin
 
-    const function theta(x)
+    function theta(x)
         if x[1] > 0
             return atan(x[2] / x[1]) / (2.0 * pi)
         else
@@ -339,7 +339,7 @@ include("geometrytypes.jl")
         end
     end
 
-    const function fletcher_powell_fg_static(∇f, x::AbstractArray{T}) where T
+    function fletcher_powell_fg_static(∇f, x::AbstractArray{T}) where T
         theta_x = theta(x)
 
         if !(∇f==nothing)

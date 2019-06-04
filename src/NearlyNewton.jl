@@ -60,7 +60,7 @@ function Objective(order=nothing; f=nothing, g=nothing,
     end
 end
 
-include("./find_direction.jl")
+include("./quasinewton/find_direction.jl")
 include("./quasinewton/SR1.jl")
 include("./quasinewton/formulae.jl")
 include("./quasinewton/gradientdescent.jl")
