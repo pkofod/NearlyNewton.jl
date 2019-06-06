@@ -2,7 +2,7 @@
 # [N&W] Numerical optimization
 # [Yuan] A review of trust region algorithms for optimization
 abstract type SubProblemSolver end
-include("subproblemsolvers/iterative.jl")
+include("subproblemsolvers/newton_tsp_solver.jl")
 
 
 function optimize(obj, approach::Tuple{<:Any, <:SubProblemSolver})
@@ -30,7 +30,7 @@ end
 function iterate(B, ∇fx, fx, x, approach, objective, options)
     scheme, subproblemsolver = approach
     # Chosing a parameter > 0 might be preferable here. See p. 4 of Yuans survey
-    t0 = 0.1
+    α = 0.1 # acceptence ratio
     t2 = T(1)/4
     t3 = t2 # could differ!
     t4 = T(1)/2
@@ -65,10 +65,10 @@ function iterate(B, ∇fx, fx, x, approach, objective, options)
     # Calculate the ratio of actual improvement over predicted improvement.
     R = -Δf/mz
 
-    # We accept all steps larger than t0 ∈ [0, 1/4). See p. 415 of [SOREN] and
-    # p.79 as well as  Theorem 4.5 and 4.6 of [N&W]. A t0 = 0 might cycle,
+    # We accept all steps larger than α ∈ [0, 1/4). See p. 415 of [SOREN] and
+    # p.79 as well as  Theorem 4.5 and 4.6 of [N&W]. A α = 0 might cycle,
     # see p. 4 of [YUAN].
-    if !(t0 <= R)
+    if !(α <= R)
         z = x
         fz = fx
         ∇fz = ∇fx
@@ -81,7 +81,7 @@ function iterate(B, ∇fx, fx, x, approach, objective, options)
 
         accept = false
     else
-        # While we accept also the steps in the case that t0 <= Δf < t2, we do not
+        # While we accept also the steps in the case that α <= Δf < t2, we do not
         # trust it too much. As a result, we restrict the trust region radius. The
         # new trust region radius should be set to a radius Δkp1 ∈ [t3*||d||, t4*Δk].
         # We use the number λ34 ∈ [0, 1] to move along the interval. [N&W] sets
