@@ -1,11 +1,11 @@
 import Base.circshift!
 
 struct QNCache{T1, T2}
-    ∇f_curr::T1 # gradient before step is taken
-    ∇f_next::T1 # gradient after step is taken
+    ∇fx::T1 # gradient before step is taken
+    ∇fz::T1 # gradient after step is taken
     y::T1 # change in successive gradients
-    x_curr::T2 # x before step is taken
-    x_next::T2 # x after step is taken
+    x::T2 # x before step is taken
+    z::T2 # x after step is taken
     d::T2 # search direction
     s::T2 # final step
 end
@@ -19,16 +19,10 @@ function preallocate_qn_caches_inplace(x0)
 end
 
 
-function shift!(qnc::QNCache)
-    copyto!(qnc.∇f_curr, qnc.∇f_next)
-    copyto!(qnc.x_curr, qnc.x_next)
-end
-
-
 function update_qn!(cache::QNCache, B, scheme, is_first=nothing)
-    d, s, y, ∇f_next, ∇f_curr = cache.d, cache.s, cache.y, cache.∇f_next, cache.∇f_curr
+    d, s, y, ∇fz, ∇fx = cache.d, cache.s, cache.y, cache.∇fz, cache.∇fx
     # Update y
-    @. y = ∇f_next - ∇f_curr
+    @. y = ∇fz - ∇fx
 
     # Update B
     if isa(is_first, Nothing)
@@ -42,9 +36,9 @@ function update_qn!(cache::QNCache, B, scheme, is_first=nothing)
     return B
 end
 
-function update_qn(d, s, ∇f_curr, ∇f_next, B, scheme, is_first=nothing)
+function update_qn(d, s, ∇fx, ∇fz, B, scheme, is_first=nothing)
     # Update y
-    y = @. ∇f_next - ∇f_curr
+    y = @. ∇fz - ∇fx
 
     # Update B
     if isa(is_first, Nothing)

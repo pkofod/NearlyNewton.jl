@@ -5,7 +5,7 @@ struct BackTracking{T1, T2} <: LineSearch
 	verbose::Bool
 end
 BackTracking(; ratio=0.5, c=1e-4, max_iter=50, verbose=false) = BackTracking(ratio, c, max_iter, verbose)
-function (ls::BackTracking)(f∇f::T, x, d, f_0, ∇f_0, α_0) where T
+function (ls::BackTracking)(f∇f::T, d, x, f_0, ∇f_0, α_0) where T
 	ratio, c, max_iter, verbose = ls.ratio, ls.c, ls.max_iter, ls.verbose
 
 
