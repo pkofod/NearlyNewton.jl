@@ -1,11 +1,13 @@
 # [SOREN] TRUST REGION MODIFICATION OF NEWTON'S METHOD
 # [N&W] Numerical optimization
 # [Yuan] A review of trust region algorithms for optimization
-abstract type SubProblemSolver end
-include("subproblemsolvers/newton_tsp_solver.jl")
+abstract type TRSPSolver end
+abstract type NearlyExactTRSP end
+
+include("subproblemsolvers/moresorensen.jl")
 
 
-function optimize(obj, approach::Tuple{<:Any, <:SubProblemSolver})
+function optimize(obj, approach::Tuple{<:Any, <:TRSPSolver})
     tr_optimize(obj, approach)
 end
 
@@ -14,20 +16,12 @@ function tr_optimize(obj, approach)
     f, ∇f = objective(true, x0)
 
     # first iteration
-    x, f, ∇f, B, is_converged = iterate(B0, ∇f, f, x0, approach, objective, options)
+    z, fz, ∇fz, Bz, is_converged = iterate(x0, f, ∇f, B0, approach, objective, options)
 
 end
 
-struct SubProblemResult
-    d
-    m
-    interior
-    lambda
-    hard_case
-    solved
-end
 
-function iterate(B, ∇fx, fx, x, approach, objective, options)
+function iterate(x, fx, ∇fx, Bx, approach, objective, options)
     scheme, subproblemsolver = approach
     # Chosing a parameter > 0 might be preferable here. See p. 4 of Yuans survey
     α = 0.1 # acceptence ratio
@@ -39,7 +33,7 @@ function iterate(B, ∇fx, fx, x, approach, objective, options)
     λγ = 0.5 # distance along growing interval ∈ (0, 1]
     Δmax = T(10)^5 # restrict the largest step
     σ = T(1)/4
-    spr = subproblemsolver()
+    spr = subproblemsolver(∇fx::AbstractVector{T}, Bx, Δ, p; abstol=1e-10, maxiter=5)
 
     mz = spr.mz
     # Grab the model value, m. If m is zero, the solution, z, does not improve
@@ -52,9 +46,9 @@ function iterate(B, ∇fx, fx, x, approach, objective, options)
         # set flag to check for problems
     end
 
-    d = spr.d
+    p = spr.p
 
-    z = @. x + d
+    z = @. x + p
 
     fz, ∇fz = objective(true, z)
 

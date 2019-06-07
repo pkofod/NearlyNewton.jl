@@ -1,4 +1,16 @@
 # [MORESORENSEN] Computing a trust region step
+# This file contains the Newton Trust Region Subproblem solver described in
+# [MORESORENSEN] and [N&W]. In the latter it's called the "iterative" solution
+# method, and the method is a near-exact solution method. It's popular and ef-
+# ficient even in cases that are problematic (known as the "hard case" after
+# [MORESORENSEN]) that are not guaranteed to be solved (at all or quickly)
+# by older methods. The method is appropriate if factorization is fast and
+# feasible.
+
+struct MoreSorensen <: NearlyExactTRSP
+
+end
+
 """
     is_maybe_hard_case(QΛQ, Qt∇f)
 
@@ -31,11 +43,10 @@ function is_maybe_hard_case(QΛQ, Qt∇f::AbstractVector{T}) where T
     end
 
     # Assume hard case and verify
-    hard_case = true
     λidx = 1
-
     for (Qt∇f_j, λ_j in zip(Qt∇f, Λ)
         if abs(λmin - λ_j) > sqrt(eps(T))
+            hard_case = true
             break
         else
             if abs(Qt∇f_j) > sqrt(eps(T))
@@ -43,6 +54,7 @@ function is_maybe_hard_case(QΛQ, Qt∇f::AbstractVector{T}) where T
                 break
             end
         end
+        λidx += 1
     end
 
     hard_case, λidx
@@ -67,31 +79,27 @@ function calc_p!(p, Qt∇f, QΛQ, λ::T, first_j) where T
     p
 end
 
-# Choose a point in the trust region for the next step using
-# the interative (nearly exact) method of section 4.3 of N&W (2006).
-# This is appropriate for Hessians that you factorize quickly.
-#
-# Args:
-#  ∇f: The gradient
-#  H:  The Hessian
-#  Δ:  The trust region size, ||s|| <= Δ
-#  s: Memory allocated for the step size, updated in place
-#  tolerance: The convergence tolerance for root finding
-#  max_iters: The maximum number of root finding iterations
-#
-# Returns:
-#  m - The numeric value of the quadratic minimization.
-#  interior - A boolean indicating whether the solution was interior
-#  lambda - The chosen regularizing quantity
-#  hard_case - Whether or not it was a "hard case" as described by N&W (2006)
-#  solved - Whether or not a solution was reached (as opposed to
-#      terminating early due to max_iters)
-function solve_tr_subproblem!(∇f::AbstractVector{T},
-                              H,
-                              Δ,
-                              s;
-                              tolerance=1e-10,
-                              max_iters=5) where T
+"""
+    solve_tr_subproblem!(∇f, H, Δ, s; abstol, maxiter)
+Args:
+    ∇f: The gradient
+    H:  The Hessian
+    Δ:  The trust region size, ||s|| <= Δ
+    s: Memory allocated for the step size, updated in place
+    abstol: The convergence abstol for root finding
+    maxiter: The maximum number of root finding iterations
+
+Returns:
+    m - The numeric value of the quadratic minimization.
+    interior - A boolean indicating whether the solution was interior
+    lambda - The chosen regularizing quantity
+    hard_case - Whether or not it was a "hard case" as described by N&W (2006)
+    solved - Whether or not a solution was reached (as opposed to
+      terminating early due to maxiter)
+"""
+function (ms::MoreSorensen)!(∇f::AbstractVector{T},
+                              H, Δ, p;
+                              abstol=1e-10, maxiter=5) where T
 
     n = length(∇f)
 
@@ -114,17 +122,17 @@ function solve_tr_subproblem!(∇f::AbstractVector{T},
     # positive, so the Newton step, pN, is fine unless norm(pN, 2) > Δ.
     if λmin >= sqrt(eps(T))
         λ = T(0)
-        calc_p!(s, Qt∇f, QΛQ, λ)
+        p = calc_p!(p, Qt∇f, QΛQ, λ)
 
-        if norm(s, 2) ≤ Δ
+        if norm(p, 2) ≤ Δ
             # No shrinkage is necessary: -(H \ ∇f) is the minimizer
             interior = true
             solved = true
             hard_case = false
 
-            m = dot(∇f, s) + 0.5 * dot(s, H * s)
+            m = dot(∇f, p) + 0.5 * dot(p, H * p)
 
-            return m, interior, λ, hard_case, solved
+            return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
         end
     end
 
@@ -149,7 +157,7 @@ function solve_tr_subproblem!(∇f::AbstractVector{T},
 
         # The old p is discarded, and replaced with one that takes into account
         # the first j such that λj ≠ λmin. Formula 4.45 in N&W (2006)
-        pλ = calc_p!(s, λ, first_j, n, Qt∇f, QΛQ)
+        pλ = calc_p!(p, λ, first_j, n, Qt∇f, QΛQ)
 
         # Check if the choice of λ leads to a solution inside the trust region.
         # If it does, then we construct the "hard case solution".
@@ -159,13 +167,11 @@ function solve_tr_subproblem!(∇f::AbstractVector{T},
 
             tau = sqrt(Δ^2 - norm(pλ, 2)^2)
 
-            # I don't think it matters which eigenvector we pick so take
-            # the first.
-            @. s = -s + tau * Q[:, 1]
+            @. p = -pλ + tau * Q[:, 1]
 
-            m = dot(∇f, s) + 0.5 * dot(s, H * s)
+            m = dot(∇f, p) + 0.5 * dot(p, H * p)
 
-            return m, interior, λ, hard_case, solved
+            return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
         end
         # If this is reached, we cannot be in the hard case after all, and we
         # can use Newton's method to find a p such that norm(p, 2) = Δ.
@@ -175,17 +181,19 @@ function solve_tr_subproblem!(∇f::AbstractVector{T},
     # with Optim.jl
 
     solved = false
-    for iter in 1:max_iters
+    for iter in 1:maxiter
         λ_previous = λ
 
-        add_diagonal!(H, λ)
+        for i = 1:n
+            @inplace H_ridged[i, i] = H[i, i] + λ
+        end
 
         R = cholesky(Hermitian(H_ridged)).U
-        s[:] = -R \ (R' \ ∇f)
-        q_l = R' \ s
+        p .= -R \ (R' \ ∇f)
+        q_l = R' \ p
 
-        ρs = norm(s, 2)
-        λ_update = ρs^2 * (ρs - Δ) / (Δ * dot(q_l, q_l))
+        p_norm = norm(p, 2)
+        λ_update = p_norm^2 * (p_norm - Δ) / (Δ * dot(q_l, q_l))
         λ += λ_update
 
         # Check that λ is not less than λ_lb, and if so, go
@@ -194,20 +202,13 @@ function solve_tr_subproblem!(∇f::AbstractVector{T},
             λ = 0.5 * (λ_previous - λ_lb) + λ_lb
         end
 
-        if abs(λ - λ_previous) ≤ tolerance
+        if abs(λ - λ_previous) ≤ abstol
             solved = true
             break
         end
     end
 
-    m = dot(∇f, s) + 0.5 * dot(s, H * s)
+    m = dot(∇f, p) + 0.5 * dot(p, H * p)
 
-    return m, interior, λ, hard_case, solved
-end
-
-function add_diagonal!(M, x)
-    n = minimum(size(M))
-    for i = 1:n
-        @inplace M[i, i] = M[i, i] + x
-    end
+    return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
 end
