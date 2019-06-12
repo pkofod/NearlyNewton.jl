@@ -1,4 +1,5 @@
-include("linesearch/ls_optimize.jl")
+include("linesearch/ls_approach.jl")
+include("trustregion/tr_approach.jl")
 
 function trace_show(show_trace, f_curr, f_next, x_next, x_curr, α)
     if show_trace

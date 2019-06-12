@@ -1,16 +1,12 @@
 import Base.circshift!
 
 struct QNCache{T1, T2}
-    ∇fx::T1 # gradient before step is taken
-    ∇fz::T1 # gradient after step is taken
     y::T1 # change in successive gradients
-    x::T2 # x before step is taken
-    z::T2 # x after step is taken
     d::T2 # search direction
-    s::T2 # final step
+    s::T2 # change in x
 end
 function QNCache(x, g)
-    QNCache(copy(g), copy(g), copy(g), copy(x), copy(x), copy(x), copy(x))
+    QNCache(copy(g), copy(x), copy(x))
 end
 function preallocate_qn_caches_inplace(x0)
     # Maintain gradient and state pairs in QNCache
@@ -19,34 +15,63 @@ function preallocate_qn_caches_inplace(x0)
 end
 
 
-function update_qn!(cache::QNCache, B, scheme, is_first=nothing)
-    d, s, y, ∇fz, ∇fx = cache.d, cache.s, cache.y, cache.∇fz, cache.∇fx
+function update_qn!(cache::QNCache, objective, ∇fx, z, ∇fz, B, scheme, scale=nothing)
+    d, s, y= cache.d, cache.s, cache.y
+    fz, ∇fz = objective(∇fz, z)
+    # add Project gradient
+
     # Update y
     @. y = ∇fz - ∇fx
 
     # Update B
-    if isa(is_first, Nothing)
-        Badj = dot(y, d)/dot(y, y)*I
+    if scale == nothing
+        if isa(scheme.approx, DirectApprox)
+            Badj = dot(y, d)/dot(y, y).*B
+        else
+            Badj = dot(y, y)/dot(y, d).*B
+        end
     else
         Badj = B
     end
+
     # Quasi-Newton update
     B = update!(Badj, s, y, scheme)
 
-    return B
+    return fz, ∇fz, B
 end
 
-function update_qn(d, s, ∇fx, ∇fz, B, scheme, is_first=nothing)
+function update_qn!(cache::QNCache, objective, ∇fx, z, ∇fz, B, scheme::Newton, scale=nothing)
+    fz, ∇fz, B = objective(B, ∇fz, z)
+
+    return fz, ∇fz, B
+end
+
+function update_qn(objective, d, s, ∇fx, z, ∇fz, B, scheme, scale=nothing)
+    fz, ∇fz = objective(∇fz, z)
+    # add Project gradient
+
     # Update y
-    y = @. ∇fz - ∇fx
+    y = ∇fz - ∇fx
 
     # Update B
-    if isa(is_first, Nothing)
-        Badj = dot(y, d)/dot(y, y)*B
+    if scale == nothing
+        if isa(scheme.approx, DirectApprox)
+            Badj = dot(y, d)/dot(y, B* y)*B
+        else
+            Badj = dot(y, B* y)/dot(y, d)*B
+        end
     else
-        Badj = B
+         Badj = B
     end
 
     # Quasi-Newton update
     B = update(Badj, s, y, scheme)
+
+    return fz, ∇fz, B
+end
+
+function update_qn(objective, d, s, ∇fx, z, ∇fz, B, scheme::Newton, is_first=nothing)
+    fz, ∇fz, B = objective(B, ∇fx, z)
+
+    return fz, ∇fz, B
 end

@@ -11,7 +11,10 @@ end
 
 function update(H, s, y, scheme::DFP{<:InverseApprox})
     ρ = inv(dot(s, y))
-    H + ρ*s*s' - H*(y*y')*H/(y'*H*y)
+    if ρ > 1e6
+        H = H + ρ*s*s' - H*(y*y')*H/(y'*H*y)
+    end
+    H
 end
 function update(B, s, y, scheme::DFP{<:DirectApprox})
     ρ = inv(dot(s, y))
@@ -28,7 +31,10 @@ function update(B, s, y, scheme::DFP{<:DirectApprox})
 end
 function update!(H, s, y, scheme::DFP{<:InverseApprox})
     ρ = inv(dot(s, y))
-    H .+= ρ*s*s' - H*(y*y')*H/(y'*H*y)
+    if ρ > 1e6
+        H .+= ρ*s*s' - H*(y*y')*H/(y'*H*y)
+    end
+    H
 end
 function update!(B, s, y, scheme::DFP{<:DirectApprox})
     ρ = inv(dot(s, y))

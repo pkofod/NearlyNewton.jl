@@ -3,12 +3,21 @@ module NearlyNewton
 # We use often use the LinearAlgebra functions dot and norm for operations rela-
 # ted to assessing angles between vectors, size of vectors and so on. I is mainly
 # used to get gradient descent for free out of Newton's method.
-using LinearAlgebra: dot, I, norm, mul!, cholesky, ldiv!, rmul!, UniformScaling, Symmetric, factorize
+using LinearAlgebra: dot, I, norm, mul!,
+                     cholesky, ldiv!, rmul!,
+                     UniformScaling, Symmetric,
+                     factorize, eigen, Hermitian,
+                     diag, # for trust region diagonal manipulation
+                     opnorm # for NWI safe guards
 
+#using TRS
 
 # make this struct that has scheme and approx
 abstract type QuasiNewton{T1} end
-
+struct Newton{T1} <: QuasiNewton{T1}
+   approx::T1
+end
+export Newton
 
 struct OptOptions{T1, T2}
     c::T1
@@ -27,6 +36,7 @@ include("quasinewton/update_qn.jl")
 include("minimize.jl")
 export minimize, minimize!, OptOptions
 export backtracking, BackTracking
+export NWI
 export InverseApprox, DirectApprox
 
 

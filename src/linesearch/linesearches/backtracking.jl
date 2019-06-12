@@ -23,6 +23,7 @@ function (ls::BackTracking)(f∇f::T, d, x, f_0, ∇f_0, α_0) where T
     iter = 0
 
     f_α = f∇f(nothing, x + α*d) # initial function value
+
 	is_solved = isfinite(f_α) && f_α <= f_0 + c*α*t
     while !is_solved && iter <= max_iter
         iter += 1
@@ -40,7 +41,7 @@ function (ls::BackTracking)(f∇f::T, d, x, f_0, ∇f_0, α_0) where T
     # end
     return α, f_α, ls_success
 end
-function backtracking!(f∇f!, x, d, f_0, ∇f_0, α_0, opt)
+function backtracking!(objective, x, d, f_0, ∇f_0, α_0, opt)
 	ratio, c, max_iter, verbose = opt.ratio, opt.c, opt.max_iter, opt.verbose
 
 
@@ -57,12 +58,12 @@ function backtracking!(f∇f!, x, d, f_0, ∇f_0, α_0, opt)
 
     iter = 0
 
-    f_α = f∇f!(nothing, x + α*d) # initial function value
+    f_α = objective(nothing, nothing, x + α*d) # initial function value
 	is_solved = false
     while !is_solved && iter <= max_iter
         iter += 1
         β, α = α, α*ratio # backtrack according to specified ratio
-        f_α = f∇f!(nothing, x + α*d) # update function value
+        f_α = objective(nothing, nothing, x + α*d) # update function value
 		is_solved = isfinite(f_α) && f_0 - f_α >= α*t
     end
 

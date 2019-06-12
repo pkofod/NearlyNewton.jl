@@ -1,0 +1,15 @@
+Inplace out of place
+Numbers
+Arrays
+Functionality (QN, CG, LS, TR, NWT, GD)
+Data?
+Custom tihngs between loops
+Caches vs prettiness
+Set up a good test bed! and a way to define tests
+Set up benchmarking! on problems! return targets!
+might as well collect in types instead of loose front inputs (or put fixed stuff upfrunt, but that removes optioality)
+
+
+Must safe guard Newton (Positive...)
+Must create proper evaluation in line search
+Wtf happens in trust region

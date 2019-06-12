@@ -1,16 +1,41 @@
 # [MORESORENSEN] Computing a trust region step
-# This file contains the Newton Trust Region Subproblem solver described in
+# This file contains a Newton Trust Region Subproblem solver based on
 # [MORESORENSEN] and [N&W]. In the latter it's called the "iterative" solution
 # method, and the method is a near-exact solution method. It's popular and ef-
 # ficient even in cases that are problematic (known as the "hard case" after
 # [MORESORENSEN]) that are not guaranteed to be solved (at all or quickly)
 # by older methods. The method is appropriate if factorization is fast and
-# feasible.
+# feasible. We use the N&W hard-case step size determination, so we call it NWI.
 
-struct MoreSorensen <: NearlyExactTRSP
+struct NWI <: NearlyExactTRSP
 
 end
 
+"""
+    initial_safeguards(B, g, Δ)
+
+Returns a tuple of initial safeguarding values for λ. Newton's method might not
+work well without these safeguards when the Hessian is not positive definite.
+"""
+function initial_safeguards(B, g, Δ)
+    # equations are on p. 560 of [MORESORENSEN]
+    T = eltype(g)
+    λS = maximum(-diag(B))
+    # they state on the first page that ||⋅|| is the Euclidean norm
+    gnorm = norm(g)
+    Bnorm = opnorm(B, 1)
+    λL = max(T(0), λS, gnorm/Δ - Bnorm)
+    λU = gnorm/Δ + Bnorm
+    (L=λL, U=λU, S=λS)
+end
+function safeguard_λ(λ::T, λsg) where T
+    # p. 558
+    λ = min(max(λ, λsg.L), λsg.U)
+    if λ ≤ λsg.S
+        λ = max(T(1)/1000*λsg.U, sqrt(λsg.L*λsg.U))
+    end
+    λ
+end
 """
     is_maybe_hard_case(QΛQ, Qt∇f)
 
@@ -44,7 +69,8 @@ function is_maybe_hard_case(QΛQ, Qt∇f::AbstractVector{T}) where T
 
     # Assume hard case and verify
     λidx = 1
-    for (Qt∇f_j, λ_j in zip(Qt∇f, Λ)
+    hard_case = true
+    for (Qt∇f_j, λ_j) in zip(Qt∇f, Λ)
         if abs(λmin - λ_j) > sqrt(eps(T))
             hard_case = true
             break
@@ -71,7 +97,6 @@ function calc_p!(p, Qt∇f, QΛQ, λ::T, first_j) where T
     # Unpack eigenvalues and eigenvectors
     Λ = QΛQ.values
     Q = QΛQ.vectors
-
     for j = first_j:length(Λ)
         κ = Qt∇f[j] / (Λ[j] + λ)
         @. p = p - κ*Q[:, j]
@@ -97,19 +122,17 @@ Returns:
     solved - Whether or not a solution was reached (as opposed to
       terminating early due to maxiter)
 """
-function (ms::MoreSorensen)!(∇f::AbstractVector{T},
+function (ms::NWI)(∇f::AbstractVector{T},
                               H, Δ, p;
-                              abstol=1e-10, maxiter=5) where T
+                              abstol=1e-10, maxiter=50) where T
 
     n = length(∇f)
-
+    Hdiag = diag(H)
     # Note that currently the eigenvalues are only sorted if H is perfectly
     # symmetric.  (Julia issue #17093)
     QΛQ = eigen(Symmetric(H))
     Q, Λ = QΛQ.vectors, QΛQ.values
-
     λmin, λmax = Λ[1], Λ[n]
-    H_ridged = copy(H)
 
     # Cache the inner products between the eigenvectors and the gradient.
     Qt∇f = Q' * ∇f
@@ -121,16 +144,15 @@ function (ms::MoreSorensen)!(∇f::AbstractVector{T},
     # Potentially an unconstrained/interior solution. The smallest eigenvalue is
     # positive, so the Newton step, pN, is fine unless norm(pN, 2) > Δ.
     if λmin >= sqrt(eps(T))
-        λ = T(0)
-        p = calc_p!(p, Qt∇f, QΛQ, λ)
-
+        λ = T(0) # no amount of I is added yet
+        p = calc_p!(p, Qt∇f, QΛQ, λ) # calculate the Newton step
         if norm(p, 2) ≤ Δ
             # No shrinkage is necessary: -(H \ ∇f) is the minimizer
             interior = true
             solved = true
             hard_case = false
 
-            m = dot(∇f, p) + 0.5 * dot(p, H * p)
+            m = dot(∇f, p) + dot(p, H * p)/2
 
             return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
         end
@@ -142,12 +164,10 @@ function (ms::MoreSorensen)!(∇f::AbstractVector{T},
     # The hard case is when the gradient is orthogonal to all
     # eigenvectors associated with the lowest eigenvalue.
     maybe_hard_case, first_j = is_maybe_hard_case(QΛQ, Qt∇f)
-
     # Solutions smaller than this lower bound on lambda are not allowed:
     # they don't ridge H enough to make H_ridge PSD.
-    λ_lb = -λmin + max(sqrt(eps(T)), sqrt(eps(T)) * (λmax - λmin))
+    λ_lb = -λmin
     λ = λ_lb
-
     # Verify that it is actually the hard case situation by calculating the
     # step with λ = λmin (it's currently λ_lb, verify that that is correct).
     if maybe_hard_case
@@ -157,7 +177,7 @@ function (ms::MoreSorensen)!(∇f::AbstractVector{T},
 
         # The old p is discarded, and replaced with one that takes into account
         # the first j such that λj ≠ λmin. Formula 4.45 in N&W (2006)
-        pλ = calc_p!(p, λ, first_j, n, Qt∇f, QΛQ)
+        pλ = calc_p!(p, Qt∇f, QΛQ, λ, first_j)
 
         # Check if the choice of λ leads to a solution inside the trust region.
         # If it does, then we construct the "hard case solution".
@@ -169,27 +189,33 @@ function (ms::MoreSorensen)!(∇f::AbstractVector{T},
 
             @. p = -pλ + tau * Q[:, 1]
 
-            m = dot(∇f, p) + 0.5 * dot(p, H * p)
+            m = dot(∇f, p) + dot(p, H * p)/2
 
             return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
         end
-        # If this is reached, we cannot be in the hard case after all, and we
-        # can use Newton's method to find a p such that norm(p, 2) = Δ.
     end
+    # If this is reached, we cannot be in the hard case after all, and we
+    # can use Newton's method to find a p such that norm(p, 2) = Δ.
+    hard_case = false
 
     # Algorithim 4.3 of N&W (2006), with s insted of p_l for consistency
     # with Optim.jl
 
     solved = false
+    # We cannot be in the λ = -λ₁ case, as the root is in (-λ₁, ∞) interval.
+    λ = λ + sqrt(eps(T))
+    isg = initial_safeguards(H, ∇f, Δ)
+    λ = safeguard_λ(λ, isg)
+
     for iter in 1:maxiter
         λ_previous = λ
 
         for i = 1:n
-            @inplace H_ridged[i, i] = H[i, i] + λ
+            @inbounds H[i, i] = Hdiag[i] + λ
         end
 
-        R = cholesky(Hermitian(H_ridged)).U
-        p .= -R \ (R' \ ∇f)
+        R = cholesky(Hermitian(H)).U
+        p .= R \ (R' \ -∇f)
         q_l = R' \ p
 
         p_norm = norm(p, 2)
@@ -199,16 +225,17 @@ function (ms::MoreSorensen)!(∇f::AbstractVector{T},
         # Check that λ is not less than λ_lb, and if so, go
         # half the way to λ_lb.
         if λ < λ_lb
-            λ = 0.5 * (λ_previous - λ_lb) + λ_lb
+            λ = T(1)/2 * (λ_previous - λ_lb) + λ_lb
         end
-
         if abs(λ - λ_previous) ≤ abstol
             solved = true
             break
         end
     end
-
-    m = dot(∇f, p) + 0.5 * dot(p, H * p)
+    for i = 1:n
+        @inbounds H[i, i] = Hdiag[i]
+    end
+    m = dot(∇f, p) + dot(p, H * p)/2
 
     return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
 end

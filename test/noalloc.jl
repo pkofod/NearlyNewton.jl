@@ -36,62 +36,62 @@
             return fx, ∇f
         end
     end
-
-    @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I, NearlyNewton.OptOptions())
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I, NearlyNewton.OptOptions())
+    sv3 = @SVector[0.0,0.0,0.0]
+    @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
     @test _alloc == 0
-    @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I)
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I)
+    @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I+sv3*sv3')
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()), I+sv3*sv3')
     @test _alloc == 0
     @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()))
     _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(InverseApprox()))
     @test _alloc == 0
 
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I, NearlyNewton.OptOptions())
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I, NearlyNewton.OptOptions())
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
     @test _alloc == 0
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I)
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I)
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I+sv3*sv3')
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()), I+sv3*sv3')
     @test _alloc == 0
     minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()))
     _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], BFGS(DirectApprox()))
     @test _alloc == 0
 
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I, NearlyNewton.OptOptions())
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I, NearlyNewton.OptOptions())
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
     @test _alloc == 0
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I)
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I)
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I+sv3*sv3')
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()), I+sv3*sv3')
     @test _alloc == 0
     minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()))
     _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(InverseApprox()))
     @test _alloc == 0
 
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I, NearlyNewton.OptOptions())
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I, NearlyNewton.OptOptions())
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
     @test _alloc == 0
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I)
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I)
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I+sv3*sv3')
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()), I+sv3*sv3')
     @test _alloc == 0
     minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()))
     _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], DFP(DirectApprox()))
     @test _alloc == 0
 
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I, NearlyNewton.OptOptions())
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I, NearlyNewton.OptOptions())
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
     @test _alloc == 0
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I)
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I)
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I+sv3*sv3')
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()), I+sv3*sv3')
     @test _alloc == 0
     minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()))
     _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(InverseApprox()))
     @test _alloc == 0
 
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I, NearlyNewton.OptOptions())
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I, NearlyNewton.OptOptions())
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I+sv3*sv3', NearlyNewton.OptOptions())
     @test _alloc == 0
-    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I)
-    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I)
+    minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I+sv3*sv3')
+    _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()), I+sv3*sv3')
     @test _alloc == 0
     minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()))
     _alloc = @allocated minimize(fletcher_powell_fg_static, @SVector[-0.5, 0.0, 0.0], SR1(DirectApprox()))

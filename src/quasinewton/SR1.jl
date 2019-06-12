@@ -6,33 +6,33 @@ struct SR1{T1} <: QuasiNewton{T1}
 end
 function update(H, s, y, scheme::SR1{<:InverseApprox})
    sHy = s - H*y
-   H + sHy*sHy'/dot(sHy, y)
+   d_sHy_y = inv(dot(sHy, y))
+   if d_sHy_y > 1e6
+      H = H + d_sHy_y*sHy*sHy'
+   end
+   H
 end
 function update(B, s, y, scheme::SR1{<:DirectApprox})
    yBs = y - B*s
    d_yBs_s = inv(dot(yBs, s))
    if d_yBs_s > 1e6
       B += d_yBs_s*yBs*yBs'
-   else
-      if isa(B, UniformScaling)
-         B = B + zero(eltype(s))*s*s'
-      end
    end
    B
 end
 function update!(H, s, y, scheme::SR1{<:InverseApprox})
    sHy = s - H*y
-   H .+= sHy*sHy'/dot(sHy, y)
+   d_sHy_y = inv(dot(sHy, y))
+   if d_sHy_y > 1e6
+      H .+= d_sHy_y*sHy*sHy'
+   end
+   H
 end
 function update!(B, s, y, scheme::SR1{<:DirectApprox})
    yBs = y - B*s
    d_yBs_s = inv(dot(yBs, s))
    if d_yBs_s > 1e6
       B .+= d_yBs_s*yBs*yBs'
-   else
-      if isa(B, UniformScaling)
-         B = B + zero(eltype(s))*s*y'
-      end
    end
    B
 end
