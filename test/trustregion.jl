@@ -141,10 +141,7 @@ function (ms::TRSolver)(∇f::AbstractVector{T}, H, Δ, p;kwargs...) where T
 end
 
 
-h0 = zeros(2,2)
-himmelblau!(h0, nothing, [2.0,2.0])
-
-    res = minimize!(himmelblau!, [2.0,2.0], (BFGS(DirectApprox()), TRSolver(1e-8, 100)), h0)
+    res = minimize!(himmelblau!, [2.0,2.0], (BFGS(DirectApprox()), TRSolver(1e-8, 100)))
 
 
 
@@ -239,13 +236,14 @@ himmelblau!(h0, nothing, [2.0,2.0])
             end
         end
 
-        function rosenbrock_gradient!(storage::Vector, x::Vector)
+        function rosenbrock_gradient!(storage, x)
 
         end
 
-        function rosenbrock_hessian!(storage::Matrix, x::Vector)
+        function rosenbrock_hessian!(storage, x)
             storage[1, 1] = 2.0 - 400.0 * x[2] + 1200.0 * x[1]^2
             storage[1, 2] = -400.0 * x[1]
             storage[2, 1] = -400.0 * x[1]
             storage[2, 2] = 200.0
         end
+        res = minimize!(rosenbrock, [2.0,2.0], (BFGS(DirectApprox()), NWI()))

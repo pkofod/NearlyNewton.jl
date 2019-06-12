@@ -1,4 +1,4 @@
-function nlsolve!(f, ∇f!, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_iter=10^4, show_trace=false)
+function nlsolve!(f, ∇f!, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, maxiter=10^4, show_trace=false)
     n = length(x0)
     x_curr = copy(x0)
     ∇f_next, ∇f_curr = similar(x0), similar(x0)
@@ -15,7 +15,7 @@ function nlsolve!(f, ∇f!, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_i
     y = ∇f_next .- ∇f_curr
     update!(scheme, B, Δx, y)
 
-    for i = 1:max_iter
+    for i = 1:maxiter
         copyto!(x_curr, x_next)
         ∇f!(∇f_curr, x_curr)
 
@@ -37,7 +37,7 @@ function nlsolve!(f, ∇f!, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_i
 end
 
 
-function nlsolve(f, ∇f, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_iter=10^4, show_trace=false)
+function nlsolve(f, ∇f, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, maxiter=10^4, show_trace=false)
     n = length(x0)
     x_curr = copy(x0)
     ∇f_curr = ∇f(x_curr)
@@ -52,7 +52,7 @@ function nlsolve(f, ∇f, scheme, x0; inverse=true, c=0.001, g_tol=1e-8, max_ite
     y = ∇f_next - ∇f_curr
     update!(scheme, B, Δx, y)
 
-    for i = 1:max_iter
+    for i = 1:maxiter
         x_curr = copy(x_next)
         ∇f_curr = ∇f(x_curr)
         d = .- solve(B, ∇f_curr)

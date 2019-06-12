@@ -22,12 +22,12 @@ export Newton
 struct OptOptions{T1, T2}
     c::T1
     g_tol::T1
-    max_iter::T2
+    maxiter::T2
     show_trace::Bool
 end
 
-OptOptions(; c=1e-4, g_tol=1e-8, max_iter=10^4, show_trace=false) =
-OptOptions(c, g_tol, max_iter, show_trace)
+OptOptions(; c=1e-4, g_tol=1e-8, maxiter=10^4, show_trace=false) =
+OptOptions(c, g_tol, maxiter, show_trace)
 
 # Include the actual functions that expose the functionality in this package.
 include("hessian_object.jl")

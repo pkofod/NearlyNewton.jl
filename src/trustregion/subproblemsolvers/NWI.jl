@@ -122,10 +122,8 @@ Returns:
     solved - Whether or not a solution was reached (as opposed to
       terminating early due to maxiter)
 """
-function (ms::NWI)(∇f::AbstractVector{T},
-                              H, Δ, p;
-                              abstol=1e-10, maxiter=50) where T
-
+function (ms::NWI)(∇f, H, Δ, p; abstol=1e-10, maxiter=50)
+    T = eltype(p)
     n = length(∇f)
     Hdiag = diag(H)
     # Note that currently the eigenvalues are only sorted if H is perfectly
@@ -154,7 +152,7 @@ function (ms::NWI)(∇f::AbstractVector{T},
 
             m = dot(∇f, p) + dot(p, H * p)/2
 
-            return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
+            return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved, Δ=Δ)
         end
     end
 
@@ -191,7 +189,7 @@ function (ms::NWI)(∇f::AbstractVector{T},
 
             m = dot(∇f, p) + dot(p, H * p)/2
 
-            return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
+            return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved, Δ=Δ)
         end
     end
     # If this is reached, we cannot be in the hard case after all, and we
@@ -237,5 +235,5 @@ function (ms::NWI)(∇f::AbstractVector{T},
     end
     m = dot(∇f, p) + dot(p, H * p)/2
 
-    return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved)
+    return (p=p, mz=m, interior=interior, λ=λ, hard_case=hard_case, solved=solved, Δ=Δ)
 end

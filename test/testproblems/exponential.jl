@@ -11,7 +11,7 @@ function exponential_fg!(∇f, x)
 end
 
 
-function exponential_hessian!(storage::Matrix, x::Vector)
+function exponential_hessian!(storage, x)
     storage[1, 1] = 2.0 * exp((2.0 - x[1])^2) * (2.0 * x[1]^2 - 8.0 * x[1] + 9)
     storage[1, 2] = 0.0
     storage[2, 1] = 0.0

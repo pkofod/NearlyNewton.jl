@@ -2,7 +2,8 @@ struct TRSolver{T} <: NearlyExactTRSP
     abstol::T
     maxiter::Integer
 end
-function (ms::TRSolver)(∇f::AbstractVector{T}, H, Δ, p) where T
+function (ms::TRSolver)(∇f, H, Δ, p)
+    T = eltype(p)
     x, info = trs(H, ∇f, Δ)
     p .= x[:,1]
 

@@ -3,7 +3,7 @@ include("linesearches/backtracking.jl")
 include("ls_optimize_inplace.jl")
 include("ls_optimize.jl")
 
-function prepare_variables(objective, approach::Tuple{<:Any, <:LineSearch}, x0, ∇fz, B)
+function prepare_variables(objective, approach, x0, ∇fz, B)
     z = x0
     x = copy(z)
 

@@ -35,7 +35,7 @@
         end
     end
 
-    res = minimize!(himmelblau!, [2.0,2.0], Newton(DirectApprox()))
+    res = minimize!(himmelblau!, copy([2.0,2.0]), Newton(DirectApprox()))
     @test norm(res[3], Inf) < 1e-8
     @printf("NN! Newton (direct): %2.2e  %d\n", norm(res[3], Inf), res[4])
 end

@@ -15,8 +15,7 @@ function preallocate_qn_caches_inplace(x0)
 end
 
 
-function update_qn!(cache::QNCache, objective, ∇fx, z, ∇fz, B, scheme, scale=nothing)
-    d, s, y= cache.d, cache.s, cache.y
+function update_obj!(objective, d, s, y, ∇fx, z, ∇fz, B, scheme, scale=nothing)
     fz, ∇fz = objective(∇fz, z)
     # add Project gradient
 
@@ -40,13 +39,13 @@ function update_qn!(cache::QNCache, objective, ∇fx, z, ∇fz, B, scheme, scale
     return fz, ∇fz, B
 end
 
-function update_qn!(cache::QNCache, objective, ∇fx, z, ∇fz, B, scheme::Newton, scale=nothing)
+function update_obj!(objective, d, s, y, ∇fx, z, ∇fz, B, scheme::Newton, scale=nothing)
     fz, ∇fz, B = objective(B, ∇fz, z)
 
     return fz, ∇fz, B
 end
 
-function update_qn(objective, d, s, ∇fx, z, ∇fz, B, scheme, scale=nothing)
+function update_obj(objective, d, s, ∇fx, z, ∇fz, B, scheme, scale=nothing)
     fz, ∇fz = objective(∇fz, z)
     # add Project gradient
 
@@ -70,7 +69,7 @@ function update_qn(objective, d, s, ∇fx, z, ∇fz, B, scheme, scale=nothing)
     return fz, ∇fz, B
 end
 
-function update_qn(objective, d, s, ∇fx, z, ∇fz, B, scheme::Newton, is_first=nothing)
+function update_obj(objective, d, s, ∇fx, z, ∇fz, B, scheme::Newton, is_first=nothing)
     fz, ∇fz, B = objective(B, ∇fx, z)
 
     return fz, ∇fz, B

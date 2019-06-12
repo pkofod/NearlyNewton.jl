@@ -7,7 +7,7 @@ end
 function update(H, s, y, scheme::SR1{<:InverseApprox})
    sHy = s - H*y
    d_sHy_y = inv(dot(sHy, y))
-   if d_sHy_y > 1e6
+   if d_sHy_y > 1e7
       H = H + d_sHy_y*sHy*sHy'
    end
    H
@@ -15,24 +15,24 @@ end
 function update(B, s, y, scheme::SR1{<:DirectApprox})
    yBs = y - B*s
    d_yBs_s = inv(dot(yBs, s))
-   if d_yBs_s > 1e6
-      B += d_yBs_s*yBs*yBs'
+   if d_yBs_s > 1e7
+      B = B + d_yBs_s*yBs*yBs'
    end
    B
 end
 function update!(H, s, y, scheme::SR1{<:InverseApprox})
    sHy = s - H*y
    d_sHy_y = inv(dot(sHy, y))
-   if d_sHy_y > 1e6
-      H .+= d_sHy_y*sHy*sHy'
+   if d_sHy_y > 1e7
+      H .= H .+ d_sHy_y*sHy*sHy'
    end
    H
 end
 function update!(B, s, y, scheme::SR1{<:DirectApprox})
    yBs = y - B*s
    d_yBs_s = inv(dot(yBs, s))
-   if d_yBs_s > 1e6
-      B .+= d_yBs_s*yBs*yBs'
+   if d_yBs_s > 1e7
+      B .= B .+ d_yBs_s*yBs*yBs'
    end
    B
 end
@@ -43,10 +43,10 @@ function update!(A::UniformScaling, s, y, scheme::SR1{<:DirectApprox})
    update(A, s, y, scheme)
 end
 
-function find_direction(A::AbstractArray, scheme::SR1, ::DirectApprox, ∇f)
+function find_direction(A, scheme::SR1, ::DirectApprox, ∇f)
    -(A\∇f)
 end
-function find_direction!(d::AbstractArray, B::AbstractArray, scheme::SR1, ::DirectApprox, ∇f)
+function find_direction!(d, B, scheme::SR1, ::DirectApprox, ∇f)
    d .= -(B\∇f)
    d
 end

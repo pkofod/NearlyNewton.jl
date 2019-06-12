@@ -9,7 +9,8 @@
         end
     end
 
-    function fletcher_powell_fg_static(∇f, x::AbstractArray{T}) where T
+    function fletcher_powell_fg_static(∇f, x)
+        T = eltype(x)
         theta_x = theta(x)
 
         if !(∇f==nothing)
